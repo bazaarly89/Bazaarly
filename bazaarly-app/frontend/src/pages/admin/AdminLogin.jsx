@@ -31,7 +31,7 @@ export default function AdminLogin() {
           {error && <p className="text-sm text-red-500">{error}</p>}
           <button className="btn-primary w-full" disabled={loading}>{loading ? 'Signing in…' : 'Sign In'}</button>
         </form>
-        <p className="mt-6 rounded-lg bg-slate-50 p-3 text-center text-xs text-slate-400">Demo: admin@store.com / Admin@123</p>
+      
       </div>
     </div>
   );
