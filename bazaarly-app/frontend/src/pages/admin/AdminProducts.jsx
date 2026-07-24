@@ -1,7 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { AdminApi } from '../../api/client';
 
-const emptyForm = { title: '', description: '', categoryId: '', brand: '', price: '', mrp: '', stock: '', sku: '', images: '' };
+// Cloudinary unsigned upload config
+const CLOUD_NAME = 'qqarhfg3';
+const UPLOAD_PRESET = 'dostivox_products';
+
+async function uploadImageToCloudinary(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', UPLOAD_PRESET);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || 'Upload failed');
+  return data.secure_url;
+}
+
+const emptyForm = { title: '', description: '', categoryId: '', brand: '', price: '', mrp: '', stock: '', sku: '', images: [] };
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -9,24 +26,48 @@ export default function AdminProducts() {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const load = () => AdminApi.products().then((r) => setProducts(r.products));
   useEffect(() => { load(); AdminApi.categories().then((r) => setCategories(r.categories)); }, []);
 
   const startEdit = (p) => {
     setEditingId(p.id);
-    setForm({ title: p.title, description: p.description, categoryId: p.category_id, brand: p.brand, price: p.price, mrp: p.mrp, stock: p.stock, sku: p.sku, images: '' });
+    setForm({ title: p.title, description: p.description, categoryId: p.category_id, brand: p.brand, price: p.price, mrp: p.mrp, stock: p.stock, sku: p.sku, images: p.images || [] });
     setShowForm(true);
   };
 
   const startNew = () => { setEditingId(null); setForm(emptyForm); setShowForm(true); };
+
+  const handleImageSelect = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    try {
+      const uploadedUrls = [];
+      for (const file of files) {
+        const url = await uploadImageToCloudinary(file);
+        uploadedUrls.push(url);
+      }
+      setForm((f) => ({ ...f, images: [...(f.images || []), ...uploadedUrls] }));
+    } catch (err) {
+      alert('Image upload failed: ' + err.message);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const removeImage = (url) => {
+    setForm((f) => ({ ...f, images: f.images.filter((img) => img !== url) }));
+  };
 
   const submit = async (e) => {
     e.preventDefault();
     const payload = {
       ...form,
       price: Number(form.price), mrp: Number(form.mrp), stock: Number(form.stock),
-      images: form.images ? form.images.split(',').map((s) => s.trim()).filter(Boolean) : undefined,
+      images: form.images && form.images.length ? form.images : undefined,
     };
     if (editingId) await AdminApi.updateProduct(editingId, payload);
     else await AdminApi.createProduct(payload);
@@ -60,7 +101,21 @@ export default function AdminProducts() {
           <input required type="number" placeholder="MRP" className="input" value={form.mrp} onChange={(e) => setForm((f) => ({ ...f, mrp: e.target.value }))} />
           <input required type="number" placeholder="Stock" className="input" value={form.stock} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))} />
           <input placeholder="SKU" className="input" value={form.sku} onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))} />
-          <input placeholder="Image URLs (comma separated)" className="input sm:col-span-2" value={form.images} onChange={(e) => setForm((f) => ({ ...f, images: e.target.value }))} />
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm text-slate-500">Product Images</label>
+            <input type="file" accept="image/*" multiple onChange={handleImageSelect} disabled={uploading} className="input" />
+            {uploading && <p className="mt-1 text-sm text-brand-600">Uploading...</p>}
+            {form.images && form.images.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {form.images.map((url) => (
+                  <div key={url} className="relative">
+                    <img src={url} alt="" className="h-16 w-16 rounded object-cover" />
+                    <button type="button" onClick={() => removeImage(url)} className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="flex gap-3 sm:col-span-2">
             <button className="btn-primary">{editingId ? 'Update Product' : 'Create Product'}</button>
             <button type="button" onClick={() => setShowForm(false)} className="btn-ghost">Cancel</button>
