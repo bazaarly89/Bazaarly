@@ -13,8 +13,8 @@ export default function Contact() {
 
       <div className="mx-auto mt-10 grid max-w-4xl gap-8 md:grid-cols-2">
         <div className="card p-6 space-y-4 text-sm text-slate-600">
-          <div><p className="font-semibold text-slate-800">Email</p><p>support@bazaarly.com</p></div>
-          <div><p className="font-semibold text-slate-800">Phone</p><p>+91 98765 43210</p></div>
+          <div><p className="font-semibold text-slate-800">Email</p><p>ak7620620@gmail.com</p></div>
+          <div><p className="font-semibold text-slate-800">Phone</p><p>+91 8969161888</p></div>
           <div><p className="font-semibold text-slate-800">Hours</p><p>Mon–Sat, 9:00 AM – 7:00 PM IST</p></div>
           <div><p className="font-semibold text-slate-800">Address</p><p>Bazaarly Commerce Pvt. Ltd., Bengaluru, India</p></div>
         </div>
