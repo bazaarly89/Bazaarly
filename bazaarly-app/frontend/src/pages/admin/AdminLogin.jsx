@@ -26,7 +26,7 @@ export default function AdminLogin() {
           <p className="mt-1 text-sm font-semibold text-slate-500">Admin Panel</p>
         </div>
         <form onSubmit={submit} className="mt-6 space-y-4">
-          <div><label className="label">Admin Email</label><input type="email" required className="input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} /></div>
+          <div><label className="label">Username</label><input type="email" required className="input" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} /></div>
           <div><label className="label">Password</label><input type="password" required className="input" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} /></div>
           {error && <p className="text-sm text-red-500">{error}</p>}
           <button className="btn-primary w-full" disabled={loading}>{loading ? 'Signing in…' : 'Sign In'}</button>
