@@ -39,7 +39,7 @@ export default function Login() {
         <p className="mt-6 text-center text-sm text-slate-500">
           Don't have an account? <Link to="/register" className="font-semibold text-brand-600 hover:underline">Create one</Link>
         </p>
-        <p className="mt-4 rounded-lg bg-slate-50 p-3 text-center text-xs text-slate-400">Demo: customer@store.com / Customer@123</p>
+      
       </div>
     </div>
   );
