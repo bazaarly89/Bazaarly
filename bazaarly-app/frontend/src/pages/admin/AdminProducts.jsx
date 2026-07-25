@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
 import { AdminApi } from '../../api/client';
 
 // Cloudinary unsigned upload config
@@ -20,24 +18,7 @@ async function uploadImageToCloudinary(file) {
   return data.secure_url;
 }
 
-const emptyForm = { title: '', description: '', categoryId: '', brand: '', price: '', mrp: '', stock: '', sku: '', images: [], imageSize: 'medium', attributes: [] };
-
-const FONT_SIZES = ['8px', '9px', '10px', '11px', '12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px'];
-const Size = ReactQuill.Quill.import('attributors/style/size');
-Size.whitelist = FONT_SIZES;
-ReactQuill.Quill.register(Size, true);
-
-const quillModules = {
-  toolbar: [
-    [{ header: [1, 2, 3, false] }],
-    [{ size: FONT_SIZES }],
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ color: [] }, { background: [] }],
-    [{ list: 'ordered' }, { list: 'bullet' }],
-    ['link'],
-    ['clean'],
-  ],
-};
+const emptyForm = { title: '', description: '', categoryId: '', brand: '', price: '', mrp: '', stock: '', sku: '', images: [] };
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -52,11 +33,7 @@ export default function AdminProducts() {
 
   const startEdit = (p) => {
     setEditingId(p.id);
-    setForm({
-      title: p.title, description: p.description, categoryId: p.category_id, brand: p.brand,
-      price: p.price, mrp: p.mrp, stock: p.stock, sku: p.sku, images: p.images || [], imageSize: p.image_size || 'medium',
-      attributes: (p.attributes || []).map((a) => ({ key: a.attr_key, value: a.attr_value })),
-    });
+    setForm({ title: p.title, description: p.description, categoryId: p.category_id, brand: p.brand, price: p.price, mrp: p.mrp, stock: p.stock, sku: p.sku, images: p.images || [] });
     setShowForm(true);
   };
 
@@ -85,13 +62,6 @@ export default function AdminProducts() {
     setForm((f) => ({ ...f, images: f.images.filter((img) => img !== url) }));
   };
 
-  const addSpecRow = () => setForm((f) => ({ ...f, attributes: [...(f.attributes || []), { key: '', value: '' }] }));
-  const updateSpecRow = (i, field, val) => setForm((f) => ({
-    ...f,
-    attributes: f.attributes.map((row, idx) => (idx === i ? { ...row, [field]: val } : row)),
-  }));
-  const removeSpecRow = (i) => setForm((f) => ({ ...f, attributes: f.attributes.filter((_, idx) => idx !== i) }));
-
   const submit = async (e) => {
     e.preventDefault();
     const payload = {
@@ -102,6 +72,11 @@ export default function AdminProducts() {
     if (editingId) await AdminApi.updateProduct(editingId, payload);
     else await AdminApi.createProduct(payload);
     setShowForm(false);
+    load();
+  };
+
+  const toggleActive = async (p) => {
+    await AdminApi.updateProduct(p.id, { isActive: p.is_active ? false : true });
     load();
   };
 
@@ -121,17 +96,7 @@ export default function AdminProducts() {
       {showForm && (
         <form onSubmit={submit} className="card mb-6 grid gap-3 p-6 sm:grid-cols-2">
           <input required placeholder="Title" className="input sm:col-span-2" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
-
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm text-slate-500">Description</label>
-            <ReactQuill
-              theme="snow"
-              value={form.description}
-              onChange={(value) => setForm((f) => ({ ...f, description: value }))}
-              modules={quillModules}
-            />
-          </div>
-
+          <textarea placeholder="Description" className="input sm:col-span-2" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
           <select required className="input" value={form.categoryId} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}>
             <option value="">Select Category</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -141,7 +106,6 @@ export default function AdminProducts() {
           <input required type="number" placeholder="MRP" className="input" value={form.mrp} onChange={(e) => setForm((f) => ({ ...f, mrp: e.target.value }))} />
           <input required type="number" placeholder="Stock" className="input" value={form.stock} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))} />
           <input placeholder="SKU" className="input" value={form.sku} onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))} />
-
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm text-slate-500">Product Images</label>
             <input type="file" accept="image/*" multiple onChange={handleImageSelect} disabled={uploading} className="input" />
@@ -157,41 +121,6 @@ export default function AdminProducts() {
               </div>
             )}
           </div>
-
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm text-slate-500">Image Display Size (on product page)</label>
-            <select className="input" value={form.imageSize} onChange={(e) => setForm((f) => ({ ...f, imageSize: e.target.value }))}>
-              <option value="small">Small</option>
-              <option value="medium">Medium (default)</option>
-              <option value="large">Large</option>
-              <option value="xl">Extra Large</option>
-            </select>
-          </div>
-
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm text-slate-500">Specifications (shown as a details table on the product page)</label>
-            <div className="space-y-2">
-              {(form.attributes || []).map((row, i) => (
-                <div key={i} className="flex gap-2">
-                  <input
-                    placeholder="Label (e.g. Battery Life)"
-                    className="input flex-1"
-                    value={row.key}
-                    onChange={(e) => updateSpecRow(i, 'key', e.target.value)}
-                  />
-                  <input
-                    placeholder="Value (e.g. 40 hours)"
-                    className="input flex-1"
-                    value={row.value}
-                    onChange={(e) => updateSpecRow(i, 'value', e.target.value)}
-                  />
-                  <button type="button" onClick={() => removeSpecRow(i)} className="shrink-0 rounded-full bg-red-50 px-3 text-red-500 hover:bg-red-100">×</button>
-                </div>
-              ))}
-            </div>
-            <button type="button" onClick={addSpecRow} className="btn-ghost mt-2">+ Add Specification</button>
-          </div>
-
           <div className="flex gap-3 sm:col-span-2">
             <button className="btn-primary">{editingId ? 'Update Product' : 'Create Product'}</button>
             <button type="button" onClick={() => setShowForm(false)} className="btn-ghost">Cancel</button>
@@ -212,6 +141,9 @@ export default function AdminProducts() {
                 <td>{p.is_active ? 'Active' : 'Hidden'}</td>
                 <td className="space-x-3 text-right">
                   <button onClick={() => startEdit(p)} className="text-brand-600 hover:underline">Edit</button>
+                  <button onClick={() => toggleActive(p)} className="text-slate-500 hover:underline">
+                    {p.is_active ? 'Hide' : 'Show'}
+                  </button>
                   <button onClick={() => remove(p.id)} className="text-red-500 hover:underline">Delete</button>
                 </td>
               </tr>
