@@ -22,9 +22,15 @@ async function uploadImageToCloudinary(file) {
 
 const emptyForm = { title: '', description: '', categoryId: '', brand: '', price: '', mrp: '', stock: '', sku: '', images: [], imageSize: 'medium' };
 
+const FONT_SIZES = ['8px', '9px', '10px', '11px', '12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px'];
+const Size = ReactQuill.Quill.import('attributors/style/size');
+Size.whitelist = FONT_SIZES;
+ReactQuill.Quill.register(Size, true);
+
 const quillModules = {
   toolbar: [
     [{ header: [1, 2, 3, false] }],
+    [{ size: FONT_SIZES }],
     ['bold', 'italic', 'underline', 'strike'],
     [{ color: [] }, { background: [] }],
     [{ list: 'ordered' }, { list: 'bullet' }],
