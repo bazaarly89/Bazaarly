@@ -20,7 +20,7 @@ async function uploadImageToCloudinary(file) {
   return data.secure_url;
 }
 
-const emptyForm = { title: '', description: '', categoryId: '', brand: '', price: '', mrp: '', stock: '', sku: '', images: [], imageSize: 'medium' };
+const emptyForm = { title: '', description: '', categoryId: '', brand: '', price: '', mrp: '', stock: '', sku: '', images: [], imageSize: 'medium', attributes: [] };
 
 const FONT_SIZES = ['8px', '9px', '10px', '11px', '12px', '14px', '16px', '18px', '20px', '24px', '28px', '32px', '36px', '48px'];
 const Size = ReactQuill.Quill.import('attributors/style/size');
@@ -52,7 +52,11 @@ export default function AdminProducts() {
 
   const startEdit = (p) => {
     setEditingId(p.id);
-    setForm({ title: p.title, description: p.description, categoryId: p.category_id, brand: p.brand, price: p.price, mrp: p.mrp, stock: p.stock, sku: p.sku, images: p.images || [], imageSize: p.image_size || 'medium' });
+    setForm({
+      title: p.title, description: p.description, categoryId: p.category_id, brand: p.brand,
+      price: p.price, mrp: p.mrp, stock: p.stock, sku: p.sku, images: p.images || [], imageSize: p.image_size || 'medium',
+      attributes: (p.attributes || []).map((a) => ({ key: a.attr_key, value: a.attr_value })),
+    });
     setShowForm(true);
   };
 
@@ -80,6 +84,13 @@ export default function AdminProducts() {
   const removeImage = (url) => {
     setForm((f) => ({ ...f, images: f.images.filter((img) => img !== url) }));
   };
+
+  const addSpecRow = () => setForm((f) => ({ ...f, attributes: [...(f.attributes || []), { key: '', value: '' }] }));
+  const updateSpecRow = (i, field, val) => setForm((f) => ({
+    ...f,
+    attributes: f.attributes.map((row, idx) => (idx === i ? { ...row, [field]: val } : row)),
+  }));
+  const removeSpecRow = (i) => setForm((f) => ({ ...f, attributes: f.attributes.filter((_, idx) => idx !== i) }));
 
   const submit = async (e) => {
     e.preventDefault();
@@ -155,6 +166,30 @@ export default function AdminProducts() {
               <option value="large">Large</option>
               <option value="xl">Extra Large</option>
             </select>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm text-slate-500">Specifications (shown as a details table on the product page)</label>
+            <div className="space-y-2">
+              {(form.attributes || []).map((row, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    placeholder="Label (e.g. Battery Life)"
+                    className="input flex-1"
+                    value={row.key}
+                    onChange={(e) => updateSpecRow(i, 'key', e.target.value)}
+                  />
+                  <input
+                    placeholder="Value (e.g. 40 hours)"
+                    className="input flex-1"
+                    value={row.value}
+                    onChange={(e) => updateSpecRow(i, 'value', e.target.value)}
+                  />
+                  <button type="button" onClick={() => removeSpecRow(i)} className="shrink-0 rounded-full bg-red-50 px-3 text-red-500 hover:bg-red-100">×</button>
+                </div>
+              ))}
+            </div>
+            <button type="button" onClick={addSpecRow} className="btn-ghost mt-2">+ Add Specification</button>
           </div>
 
           <div className="flex gap-3 sm:col-span-2">
