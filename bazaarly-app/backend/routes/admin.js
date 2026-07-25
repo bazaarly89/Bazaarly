@@ -39,23 +39,26 @@ router.get('/products', (req, res) => {
   const withImages = products.map((p) => ({
     ...p,
     images: db.prepare('SELECT url FROM product_images WHERE product_id = ? ORDER BY position').all(p.id).map((i) => i.url),
+    attributes: db.prepare('SELECT attr_key, attr_value FROM product_attributes WHERE product_id = ?').all(p.id),
   }));
   res.json({ products: withImages });
 });
 
 router.post('/products', (req, res) => {
-  const { title, description, categoryId, brand, price, mrp, stock, sku, images = [] } = req.body;
+  const { title, description, categoryId, brand, price, mrp, stock, sku, images = [], attributes = [] } = req.body;
   const id = uuid();
   const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString(36);
   db.prepare(`INSERT INTO products (id,title,slug,description,category_id,brand,price,mrp,stock,sku) VALUES (?,?,?,?,?,?,?,?,?,?)`)
     .run(id, title, slug, description || '', categoryId, brand || '', price, mrp, stock || 0, sku || '');
   const insertImg = db.prepare('INSERT INTO product_images (id,product_id,url,position) VALUES (?,?,?,?)');
   images.forEach((url, i) => insertImg.run(uuid(), id, url, i));
+  const insertAttr = db.prepare('INSERT INTO product_attributes (id,product_id,attr_key,attr_value) VALUES (?,?,?,?)');
+  attributes.filter((a) => a.key).forEach((a) => insertAttr.run(uuid(), id, a.key, a.value || ''));
   res.status(201).json({ product: db.prepare('SELECT * FROM products WHERE id = ?').get(id) });
 });
 
 router.put('/products/:id', (req, res) => {
-  const { title, description, categoryId, brand, price, mrp, stock, sku, isActive, images } = req.body;
+  const { title, description, categoryId, brand, price, mrp, stock, sku, isActive, images, attributes } = req.body;
   db.prepare(`UPDATE products SET title=COALESCE(?,title), description=COALESCE(?,description),
     category_id=COALESCE(?,category_id), brand=COALESCE(?,brand), price=COALESCE(?,price), mrp=COALESCE(?,mrp),
     stock=COALESCE(?,stock), sku=COALESCE(?,sku), is_active=COALESCE(?,is_active) WHERE id = ?`)
@@ -65,6 +68,11 @@ router.put('/products/:id', (req, res) => {
     db.prepare('DELETE FROM product_images WHERE product_id = ?').run(req.params.id);
     const insertImg = db.prepare('INSERT INTO product_images (id,product_id,url,position) VALUES (?,?,?,?)');
     images.forEach((url, i) => insertImg.run(uuid(), req.params.id, url, i));
+  }
+  if (Array.isArray(attributes)) {
+    db.prepare('DELETE FROM product_attributes WHERE product_id = ?').run(req.params.id);
+    const insertAttr = db.prepare('INSERT INTO product_attributes (id,product_id,attr_key,attr_value) VALUES (?,?,?,?)');
+    attributes.filter((a) => a.key).forEach((a) => insertAttr.run(uuid(), req.params.id, a.key, a.value || ''));
   }
   res.json({ product: db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id) });
 });
