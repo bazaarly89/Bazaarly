@@ -48,7 +48,7 @@ export default function ProductDetails() {
   return (
     <div className="container-app py-10">
       <div className="grid gap-10 lg:grid-cols-2">
-        <ImageZoom images={product.images} />
+        <ImageZoom images={product.images} size={product.image_size || 'medium'} />
 
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-brand-500">{product.brand}</p>
@@ -65,7 +65,10 @@ export default function ProductDetails() {
             )}
           </div>
 
-          <p className="mt-5 text-slate-600 leading-relaxed">{product.description}</p>
+          <div
+            className="prose prose-slate mt-5 max-w-none leading-relaxed text-slate-600"
+            dangerouslySetInnerHTML={{ __html: product.description || '' }}
+          />
 
           {attributes?.length > 0 && (
             <div className="mt-5 grid grid-cols-2 gap-2 text-sm">
