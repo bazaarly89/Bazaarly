@@ -200,6 +200,19 @@ try {
 } catch (err) {
   console.error('Category migration failed:', err.message);
 }
+// ---- Safe migration: add tag/show_text to banners if the table already existed without them ----
+try {
+  const bannerCols = db.prepare("PRAGMA table_info(banners)").all().map((c) => c.name);
+  if (!bannerCols.includes('tag')) {
+    db.exec('ALTER TABLE banners ADD COLUMN tag TEXT');
+  }
+  if (!bannerCols.includes('show_text')) {
+    db.exec('ALTER TABLE banners ADD COLUMN show_text INTEGER DEFAULT 1');
+  }
+  db.exec('UPDATE banners SET show_text = 1 WHERE show_text IS NULL');
+} catch (err) {
+  console.error('Banner migration failed:', err.message);
+}
 
 // ---- Seed demo data only if empty ----
 const userCount = db.prepare('SELECT COUNT(*) c FROM users').get().c;
