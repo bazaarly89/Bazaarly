@@ -78,6 +78,9 @@ export const Api = {
   // notifications
   notifications: () => unwrap(api.get('/notifications')),
   markNotificationRead: (id) => unwrap(api.put(`/notifications/${id}/read`)),
+
+  // editable website text (Home / About pages)
+  siteContent: () => unwrap(api.get('/content')),
 };
 
 export const AdminApi = {
