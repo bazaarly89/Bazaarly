@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Api } from '../api/client';
 import ProductCard from '../components/ProductCard';
+import HeroCarousel from '../components/HeroCarousel';
 
 // Fallback text used only until the content loads (or if a key was never set).
 const DEFAULT_CONTENT = {
@@ -40,31 +41,7 @@ export default function Home() {
 
   return (
     <div>
-      {/* Hero */}
-      <section
-        className="relative overflow-hidden"
-        style={{ background: `linear-gradient(135deg, ${content.home_hero_bg_from}, ${content.home_hero_bg_to})` }}
-      >
-        <div className="container-app grid items-center gap-10 py-16 lg:grid-cols-2 lg:py-24">
-          <div className="animate-fadeUp text-white">
-            <p className="mb-3 inline-block rounded-full bg-white/15 px-4 py-1 text-sm font-medium">{content.home_hero_badge}</p>
-            <h1
-              className="font-display text-4xl font-semibold leading-tight sm:text-5xl [&_p]:m-0"
-              dangerouslySetInnerHTML={{ __html: content.home_hero_title }}
-            />
-            <p className="mt-4 max-w-md text-brand-100">{content.home_hero_subtitle}</p>
-            <div className="mt-8 flex gap-4">
-              <Link to="/products" className="btn-accent">Shop Now</Link>
-              <Link to="/categories" className="btn border-2 border-white/60 text-white px-6 py-2.5 hover:bg-white/10">Browse Categories</Link>
-            </div>
-          </div>
-          <div className="relative animate-scaleIn">
-            <img src={content.home_hero_image} alt="Featured" className="w-full rounded-xl2 shadow-2xl" />
-          </div>
-        </div>
-        <svg className="absolute -bottom-1 left-0 w-full text-[#faf9fc]" viewBox="0 0 1440 80" fill="currentColor"><path d="M0 40 C 360 100 1080 -20 1440 40 L1440 80 L0 80 Z" /></svg>
-      </section>
-
+     <HeroCarousel/>
       {/* Categories */}
       <section className="container-app py-14">
         <div className="mb-8 flex items-center justify-between">
