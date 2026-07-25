@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dostivox – Homepage Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --gold:#CBA135; --ink:#14161C; --muted:#767C88; --line:#ececec; }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Inter',sans-serif;background:#faf9f7;color:var(--ink);}
+  .app{max-width:480px;margin:0 auto;background:#faf9f7;padding-bottom:78px;box-shadow:0 0 30px rgba(0,0,0,0.06);min-height:100vh;}
+
+  /* ---- top bar ---- */
+  .topbar{display:flex;align-items:center;gap:8px;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line);font-size:14px;}
+  .topbar-badge{font-family:'Sora',sans-serif;font-weight:700;font-size:11px;letter-spacing:.06em;background:var(--ink);color:#fff;padding:3px 8px;border-radius:5px;}
+  .topbar-address{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .topbar-coin{background:#fff4dd;color:#b8860b;border:1px solid #f0d99a;font-weight:700;font-size:12px;padding:3px 9px;border-radius:999px;}
+
+  /* ---- search ---- */
+  .search-wrap{background:#fff;padding:0 16px 12px;}
+  .searchbar{display:flex;align-items:center;gap:10px;border:1.5px solid var(--gold);border-radius:12px;padding:10px 14px;background:#fff;color:var(--muted);}
+  .searchbar span{flex:1;font-size:14px;}
+
+  /* ---- category nav ---- */
+  .catnav{display:flex;gap:22px;overflow-x:auto;padding:14px 16px 10px;background:#fff;border-bottom:1px solid var(--line);}
+  .catnav-item{display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;padding-bottom:8px;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer;}
+  .catnav-item.active{color:var(--ink);border-bottom-color:var(--gold);}
+  .catnav-icon{width:40px;height:40px;border-radius:50%;background:#f5f0e4;display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .catnav-item.active .catnav-icon{background:var(--gold);color:#fff;}
+  .catnav-label{font-size:12px;font-weight:600;white-space:nowrap;}
+
+  /* ---- hero (compact version of the earlier carousel) ---- */
+  .hero{position:relative;width:100%;height:280px;overflow:hidden;background:#0B0D12;}
+  .slide{position:absolute;inset:0;opacity:0;transition:opacity .9s ease;}
+  .slide.active{opacity:1;}
+  .slide-bg{position:absolute;inset:0;background-size:cover;background-position:center;transform:scale(1.08);filter:brightness(.75);}
+  .slide.active .slide-bg{animation:kb 6s ease-out forwards;}
+  @keyframes kb{from{transform:scale(1.12);}to{transform:scale(1);}}
+  .overlay{position:absolute;inset:0;background:linear-gradient(90deg, rgba(11,13,18,.9) 10%, rgba(11,13,18,.2) 80%);}
+  .slide-content{position:relative;z-index:2;height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 22px;max-width:80%;color:#fff;}
+  .eyebrow{font-family:'Sora',sans-serif;font-weight:700;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;}
+  .title{font-family:'Sora',sans-serif;font-weight:800;font-size:23px;margin:0 0 6px;line-height:1.15;}
+  .subtitle{font-size:12.5px;color:#cfd2d8;margin:0 0 14px;}
+  .cta{display:inline-block;font-family:'Sora',sans-serif;font-weight:700;font-size:12.5px;color:var(--ink);background:var(--gold);padding:9px 18px;border-radius:2px;text-decoration:none;width:fit-content;}
+  .progress-row{position:absolute;left:16px;right:16px;bottom:14px;z-index:3;display:flex;gap:5px;}
+  .progress-track{flex:1;height:3px;border-radius:3px;background:rgba(255,255,255,.3);overflow:hidden;}
+  .progress-fill{height:100%;width:0;background:var(--gold);}
+  .progress-track.done .progress-fill{width:100%;background:rgba(255,255,255,.55);}
+  .progress-track.active .progress-fill{animation:fill 4.5s linear forwards;}
+  @keyframes fill{from{width:0;}to{width:100%;}}
+
+  /* ---- suggested for you ---- */
+  .suggested{background:#f2eee6;margin:14px 12px;border-radius:16px;padding:18px 14px;}
+  .suggested-title{font-family:'Sora',sans-serif;font-size:18px;font-weight:700;margin:0 0 14px;}
+  .suggested-row{display:flex;gap:12px;overflow-x:auto;}
+  .suggested-card{flex:0 0 122px;background:#fff;border-radius:12px;padding:10px;text-decoration:none;color:var(--ink);display:flex;flex-direction:column;gap:8px;box-shadow:0 2px 8px rgba(0,0,0,.05);}
+  .suggested-card img{width:100%;height:80px;object-fit:cover;border-radius:8px;}
+  .suggested-name{font-size:12px;font-weight:600;}
+  .suggested-cta{font-size:11.5px;font-weight:700;color:var(--gold);}
+
+  /* ---- promo tiles ---- */
+  .promo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:6px 12px 20px;}
+  .promo-tile{position:relative;border-radius:14px;overflow:hidden;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.06);text-decoration:none;color:var(--ink);}
+  .promo-tile img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;}
+  .promo-badge{position:absolute;top:8px;right:8px;background:rgba(20,22,28,.7);color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;}
+  .promo-text{padding:8px 9px 11px;display:flex;flex-direction:column;gap:2px;}
+  .promo-text strong{font-size:12px;}
+  .promo-text span{font-size:10.5px;color:var(--muted);}
+
+  /* ---- bottom nav ---- */
+  .bottomnav{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;display:flex;background:#fff;border-top:1px solid var(--line);padding:8px 0;}
+  .bottomnav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;}
+  .bottomnav-item.active{color:var(--gold);}
+  .bottomnav-icon-wrap{position:relative;font-size:19px;}
+  .bottomnav-badge{position:absolute;top:-6px;right:-9px;background:#e0413a;color:#fff;font-size:9px;font-weight:700;border-radius:999px;padding:1px 5px;}
+
+  .note{max-width:480px;margin:24px auto;padding:0 20px;font-size:13px;color:#8a8f99;line-height:1.7;}
+  .note b{color:var(--gold);}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="topbar" id="topbar"></div>
+  <div class="search-wrap" id="searchbar"></div>
+  <div class="catnav" id="catnav"></div>
+  <div class="hero" id="hero">
+    <div class="progress-row" id="progressRow"></div>
+  </div>
+  <div class="suggested" id="suggested"></div>
+  <div class="promo-grid" id="promoGrid"></div>
+  <div class="bottomnav" id="bottomnav"></div>
+</div>
+
+<div class="note">
+  Yeh <b>preview-homepage.html</b> hai — poore homepage ka combined demo, seedha browser me khulta hai.
+  Real project me yeh sab <b>homepage.config.js</b> se aata hai — koi bhi text/image/link is file me
+  edit karo, component code chhedna nahi padega.
+</div>
+
+<script>
+/* ============== SAB DATA YAHAN (mirrors homepage.config.js) ============== */
+const DATA = {
+  topBar: { label: "WORK", address: "Line Bazar, Purnea, Bihar", coinBadge: 6 },
+  search: { placeholder: "Search for products, brands and more" },
+  categories: [
+    { label: "For You", icon: "🛍️" },
+    { label: "Fashion", icon: "👕" },
+    { label: "Mobiles", icon: "📱" },
+    { label: "Electronics", icon: "💻" },
+    { label: "Beauty", icon: "💄" },
+  ],
+  heroSlides: [
+    {
+      image: "https://images.unsplash.com/photo-1550009158-9ebf69173e03?w=1200&q=80",
+      eyebrow: "Flash Sale",
+      title: "Up to 30% off gaming laptops",
+      subtitle: "RTX powered performance, today only.",
+      ctaText: "Shop Now",
+    },
+    {
+      image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=1200&q=80",
+      eyebrow: "Travel Max Sale",
+      title: "Flat 15% off flights",
+      subtitle: "Book between 8–11 PM and save more.",
+      ctaText: "Book Now",
+    },
+    {
+      image: "https://images.unsplash.com/photo-1587202372775-e229f172b9d7?w=1200&q=80",
+      eyebrow: "New Launch",
+      title: "Sound that moves with you",
+      subtitle: "Premium wireless audio for everyday carry.",
+      ctaText: "Explore",
+    },
+  ],
+  suggested: {
+    greetingTemplate: "{name}, still looking for these?",
+    name: "Amit",
+    items: [
+      { title: "Graphic Cards", image: "https://images.unsplash.com/photo-1591488320449-011701bb6704?w=300&q=80" },
+      { title: "PS5", image: "https://images.unsplash.com/photo-1606813907291-d86efa9b94db?w=300&q=80" },
+      { title: "Deodorant Roll-On", image: "https://images.unsplash.com/photo-1608248543803-ba4f8c70ae0b?w=300&q=80" },
+      { title: "Face Wash", image: "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=300&q=80" },
+    ],
+  },
+  promoTiles: [
+    { image: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=400&q=80", title: "Up to 38% Off", brand: "Baby Care" },
+    { image: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=400&q=80", title: "Just ₹32,490*", brand: "55\" Smart TV" },
+    { image: "https://images.unsplash.com/photo-1556228720-195a672e8a03?w=400&q=80", title: "Shop Now", brand: "Face Wash Range" },
+  ],
+  bottomNav: [
+    { label: "Home", icon: "🏠", active: true },
+    { label: "Play", icon: "▶️" },
+    { label: "Categories", icon: "▦" },
+    { label: "Account", icon: "👤" },
+    { label: "Cart", icon: "🛒", badge: 1 },
+  ],
+};
+/* =========================================================================== */
+
+// Top bar
+document.getElementById('topbar').innerHTML = `
+  <span class="topbar-badge">${DATA.topBar.label}</span>
+  <span class="topbar-address">${DATA.topBar.address}</span>
+  ${DATA.topBar.coinBadge != null ? `<span class="topbar-coin">${DATA.topBar.coinBadge}</span>` : ''}
+`;
+
+// Search
+document.getElementById('searchbar').innerHTML = `
+  <div class="searchbar">🔍 <span>${DATA.search.placeholder}</span> 📷 🎤</div>
+`;
+
+// Category nav
+document.getElementById('catnav').innerHTML = DATA.categories.map((c,i)=>`
+  <div class="catnav-item ${i===0?'active':''}">
+    <div class="catnav-icon">${c.icon}</div>
+    <div class="catnav-label">${c.label}</div>
+  </div>
+`).join('');
+
+// Hero carousel
+const hero = document.getElementById('hero');
+const progressRow = document.getElementById('progressRow');
+let current = 0, timer = null;
+function renderHero(){
+  document.querySelectorAll('.slide').forEach(s=>s.remove());
+  DATA.heroSlides.forEach(s=>{
+    const el = document.createElement('div');
+    el.className = 'slide';
+    el.innerHTML = `
+      <div class="slide-bg" style="background-image:url('${s.image}')"></div>
+      <div class="overlay"></div>
+      <div class="slide-content">
+        <div class="eyebrow">${s.eyebrow}</div>
+        <h1 class="title">${s.title}</h1>
+        <p class="subtitle">${s.subtitle}</p>
+        <a class="cta" href="#">${s.ctaText} →</a>
+      </div>`;
+    hero.insertBefore(el, progressRow);
+  });
+  progressRow.innerHTML = DATA.heroSlides.map((_,i)=>`<div class="progress-track"><div class="progress-fill"></div></div>`).join('');
+}
+function goToSlide(i){
+  current = (i + DATA.heroSlides.length) % DATA.heroSlides.length;
+  document.querySelectorAll('.slide').forEach((el,idx)=>el.classList.toggle('active', idx===current));
+  document.querySelectorAll('.progress-track').forEach((el,idx)=>{
+    el.classList.toggle('active', idx===current);
+    el.classList.toggle('done', idx<current);
+  });
+  clearTimeout(timer);
+  timer = setTimeout(()=>goToSlide(current+1), 4500);
+}
+renderHero();
+goToSlide(0);
+
+// Suggested for you
+const greeting = DATA.suggested.greetingTemplate.replace('{name}', DATA.suggested.name);
+document.getElementById('suggested').innerHTML = `
+  <h3 class="suggested-title">${greeting}</h3>
+  <div class="suggested-row">
+    ${DATA.suggested.items.map(it=>`
+      <a class="suggested-card" href="#">
+        <img src="${it.image}" alt="${it.title}">
+        <span class="suggested-name">${it.title}</span>
+        <span class="suggested-cta">View Store</span>
+      </a>
+    `).join('')}
+  </div>
+`;
+
+// Promo tiles
+document.getElementById('promoGrid').innerHTML = DATA.promoTiles.map(t=>`
+  <a class="promo-tile" href="#">
+    <span class="promo-badge">AD</span>
+    <img src="${t.image}" alt="${t.brand}">
+    <div class="promo-text"><strong>${t.title}</strong><span>${t.brand}</span></div>
+  </a>
+`).join('');
+
+// Bottom nav
+document.getElementById('bottomnav').innerHTML = DATA.bottomNav.map(t=>`
+  <div class="bottomnav-item ${t.active?'active':''}">
+    <span class="bottomnav-icon-wrap">${t.icon}${t.badge!=null?`<span class="bottomnav-badge">${t.badge}</span>`:''}</span>
+    <span>${t.label}</span>
+  </div>
+`).join('');
+</script>
+</body>
+</html>

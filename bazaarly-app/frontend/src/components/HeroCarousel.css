@@ -1,0 +1,262 @@
+/* Dostivox premium hero carousel styles
+   Fonts used: Sora (display) + Inter (body).
+   Add this to your index.html <head> if not already present:
+   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+*/
+
+.hero {
+  --gold: #cba135;
+  --ink: #0b0d12;
+  --text: #f5f3ee;
+  --muted: #a7adb8;
+  position: relative;
+  width: 100%;
+  height: min(78vh, 620px);
+  min-height: 380px;
+  overflow: hidden;
+  background: var(--ink);
+  border-radius: 0 0 22px 22px;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.9s ease;
+  pointer-events: none;
+}
+.slide.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.slide-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.08);
+  filter: brightness(0.78);
+}
+.slide.active .slide-bg {
+  animation: kenburns 7s ease-out forwards;
+}
+@keyframes kenburns {
+  from {
+    transform: scale(1.12);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* banner (pamphlet) mode: full image, no dark overlay, no text */
+.slide.mode-banner .slide-bg {
+  filter: brightness(1);
+}
+.banner-link {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(11, 13, 18, 0.92) 0%,
+    rgba(11, 13, 18, 0.55) 45%,
+    rgba(11, 13, 18, 0.05) 75%
+  );
+}
+
+.slide-content {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 640px;
+  padding: 0 6vw;
+  color: var(--text);
+  font-family: "Inter", sans-serif;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "Sora", sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 14px;
+  width: fit-content;
+}
+.eyebrow::before {
+  content: "";
+  width: 22px;
+  height: 2px;
+  background: var(--gold);
+  display: inline-block;
+}
+
+.title {
+  font-family: "Sora", sans-serif;
+  font-weight: 800;
+  font-size: clamp(28px, 5vw, 52px);
+  line-height: 1.08;
+  margin: 0 0 10px;
+  opacity: 0;
+  transform: translateY(18px);
+}
+.subtitle {
+  font-size: clamp(14px, 1.6vw, 17px);
+  color: var(--muted);
+  max-width: 460px;
+  margin: 0 0 22px;
+  opacity: 0;
+  transform: translateY(18px);
+}
+.slide.active .title {
+  animation: rise 0.7s 0.25s ease forwards;
+}
+.slide.active .subtitle {
+  animation: rise 0.7s 0.4s ease forwards;
+}
+@keyframes rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 26px;
+  opacity: 0;
+}
+.slide.active .specs {
+  animation: rise 0.7s 0.5s ease forwards;
+}
+.spec-chip {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 6px 12px;
+  border: 1px solid rgba(245, 243, 238, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(4px);
+  color: var(--text);
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  font-family: "Sora", sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--gold);
+  padding: 13px 26px;
+  clip-path: polygon(0 0, 100% 0, 94% 100%, 0% 100%);
+  text-decoration: none;
+  opacity: 0;
+}
+.slide.active .cta {
+  animation: rise 0.7s 0.6s ease forwards;
+}
+.cta:hover {
+  filter: brightness(1.08);
+}
+
+.progress-row {
+  position: absolute;
+  left: 6vw;
+  right: 6vw;
+  bottom: 22px;
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+}
+.progress-track {
+  flex: 1;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+  cursor: pointer;
+}
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--gold);
+}
+.progress-track.done .progress-fill {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.55);
+}
+.progress-track.active .progress-fill {
+  animation: fill 5s linear forwards;
+}
+@keyframes fill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(11, 13, 18, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  opacity: 0;
+  transition: 0.2s;
+}
+.hero:hover .arrow {
+  opacity: 1;
+}
+.arrow.left {
+  left: 20px;
+}
+.arrow.right {
+  right: 20px;
+}
+.arrow:hover {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+@media (max-width: 640px) {
+  .hero {
+    height: 62vh;
+    min-height: 340px;
+    border-radius: 0 0 14px 14px;
+  }
+  .arrow {
+    display: none;
+  }
+}
