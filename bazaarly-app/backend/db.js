@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS products (
   rating REAL DEFAULT 0,
   rating_count INTEGER DEFAULT 0,
   is_active INTEGER DEFAULT 1,
+  image_size TEXT DEFAULT 'medium',
   created_at TEXT DEFAULT (datetime('now'))
 );
 
