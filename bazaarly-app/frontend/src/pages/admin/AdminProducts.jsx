@@ -1,6 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
-import ReactQuill from 'react-quill';
-import ReactQuill/dist-quill.snow.css';
+import React, { useEffect, useState } from 'react';
 import { AdminApi } from '../../api/client';
 
 // Cloudinary unsigned upload config
@@ -20,60 +18,7 @@ async function uploadImageToCloudinary(file) {
   return data.secure_url;
 }
 
-const emptyForm = { title: '', description: '', categoryId: '', brand: '', price: '', mrp: '', stock: '', sku: '', images: [], imageSize: 'medium' };
-
-// ---------- Simple rich text editor for the description field ----------
-function DescriptionEditor({ value, onChange }) {
-  const editorRef = useRef(null);
-
-  // Load initial/edited value into the editor once
-  useEffect(() => {
-    if (editorRef.current && editorRef.current.innerHTML !== value) {
-      editorRef.current.innerHTML = value || '';
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const exec = (command, arg) => {
-    document.execCommand(command, false, arg);
-    editorRef.current?.focus();
-    onChange(editorRef.current.innerHTML);
-  };
-
-  const handleFontSize = (e) => {
-    // execCommand fontSize uses 1-7 scale; map small/medium/large/xl to it
-    const map = { small: '2', medium: '3', large: '5', xl: '7' };
-    exec('fontSize', map[e.target.value] || '3');
-    e.target.value = '';
-  };
-
-  return (
-    <div className="sm:col-span-2">
-      <label className="mb-1 block text-sm text-slate-500">Description</label>
-      <div className="mb-1 flex flex-wrap gap-2 rounded-t-lg border border-b-0 border-slate-200 bg-slate-50 p-2">
-        <button type="button" onClick={() => exec('bold')} className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-bold">B</button>
-        <button type="button" onClick={() => exec('italic')} className="rounded border border-slate-300 bg-white px-2 py-1 text-xs italic">I</button>
-        <select defaultValue="" onChange={handleFontSize} className="rounded border border-slate-300 bg-white px-2 py-1 text-xs">
-          <option value="" disabled>Font Size</option>
-          <option value="small">Small</option>
-          <option value="medium">Medium</option>
-          <option value="large">Large</option>
-          <option value="xl">Extra Large</option>
-        </select>
-        <button type="button" onClick={() => exec('insertUnorderedList')} className="rounded border border-slate-300 bg-white px-2 py-1 text-xs">• List</button>
-        <button type="button" onClick={() => exec('removeFormat')} className="rounded border border-slate-300 bg-white px-2 py-1 text-xs">Clear</button>
-      </div>
-      <div
-        ref={editorRef}
-        contentEditable
-        onInput={(e) => onChange(e.currentTarget.innerHTML)}
-        className="input min-h-[140px] rounded-t-none"
-        style={{ overflowY: 'auto' }}
-      />
-      <p className="mt-1 text-xs text-slate-400">Select text then click Bold/Italic/Font Size to format it.</p>
-    </div>
-  );
-}
+const emptyForm = { title: '', description: '', categoryId: '', brand: '', price: '', mrp: '', stock: '', sku: '', images: [] };
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -88,7 +33,7 @@ export default function AdminProducts() {
 
   const startEdit = (p) => {
     setEditingId(p.id);
-    setForm({ title: p.title, description: p.description, categoryId: p.category_id, brand: p.brand, price: p.price, mrp: p.mrp, stock: p.stock, sku: p.sku, images: p.images || [], imageSize: p.image_size || 'medium' });
+    setForm({ title: p.title, description: p.description, categoryId: p.category_id, brand: p.brand, price: p.price, mrp: p.mrp, stock: p.stock, sku: p.sku, images: p.images || [] });
     setShowForm(true);
   };
 
@@ -146,9 +91,7 @@ export default function AdminProducts() {
       {showForm && (
         <form onSubmit={submit} className="card mb-6 grid gap-3 p-6 sm:grid-cols-2">
           <input required placeholder="Title" className="input sm:col-span-2" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
-
-          <DescriptionEditor value={form.description} onChange={(html) => setForm((f) => ({ ...f, description: html }))} />
-
+          <textarea placeholder="Description" className="input sm:col-span-2" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
           <select required className="input" value={form.categoryId} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}>
             <option value="">Select Category</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -158,7 +101,6 @@ export default function AdminProducts() {
           <input required type="number" placeholder="MRP" className="input" value={form.mrp} onChange={(e) => setForm((f) => ({ ...f, mrp: e.target.value }))} />
           <input required type="number" placeholder="Stock" className="input" value={form.stock} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))} />
           <input placeholder="SKU" className="input" value={form.sku} onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))} />
-
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm text-slate-500">Product Images</label>
             <input type="file" accept="image/*" multiple onChange={handleImageSelect} disabled={uploading} className="input" />
@@ -174,17 +116,6 @@ export default function AdminProducts() {
               </div>
             )}
           </div>
-
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm text-slate-500">Image Display Size (on product page)</label>
-            <select className="input" value={form.imageSize} onChange={(e) => setForm((f) => ({ ...f, imageSize: e.target.value }))}>
-              <option value="small">Small</option>
-              <option value="medium">Medium (default)</option>
-              <option value="large">Large</option>
-              <option value="xl">Extra Large</option>
-            </select>
-          </div>
-
           <div className="flex gap-3 sm:col-span-2">
             <button className="btn-primary">{editingId ? 'Update Product' : 'Create Product'}</button>
             <button type="button" onClick={() => setShowForm(false)} className="btn-ghost">Cancel</button>
