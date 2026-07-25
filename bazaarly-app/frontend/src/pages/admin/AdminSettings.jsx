@@ -1,5 +1,18 @@
 import React, { useEffect, useState } from 'react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { AdminApi } from '../../api/client';
+
+// Toolbar for the Hero Title editor — lets the admin select part of the
+// text (e.g. just the word "Shop") and change its size and color.
+const heroTitleModules = {
+  toolbar: [
+    [{ size: ['small', false, 'large', 'huge'] }],
+    ['bold', 'italic'],
+    [{ color: [] }],
+    ['clean'],
+  ],
+};
 
 export default function AdminSettings() {
   const [settings, setSettings] = useState({});
@@ -23,6 +36,7 @@ export default function AdminSettings() {
     e.preventDefault();
     const contentKeys = [
       'home_hero_badge', 'home_hero_title', 'home_hero_subtitle',
+      'home_hero_bg_from', 'home_hero_bg_to', 'home_hero_image',
       'home_promo_title', 'home_promo_text',
       'about_heading', 'about_para1', 'about_para2',
       'about_stat1_num', 'about_stat1_label',
@@ -67,12 +81,34 @@ export default function AdminSettings() {
           <input className="input" value={field('home_hero_badge')} onChange={update('home_hero_badge')} />
         </div>
         <div>
-          <label className="label">Hero Title (use a new line for a line-break)</label>
-          <textarea className="input" rows={2} value={field('home_hero_title')} onChange={update('home_hero_title')} />
+          <label className="label">Hero Title (select a word, then use the toolbar to resize / color it — e.g. make "Shop" big, "Live Beautifully" small)</label>
+          <ReactQuill
+            theme="snow"
+            modules={heroTitleModules}
+            value={field('home_hero_title')}
+            onChange={(html) => setSettings((s) => ({ ...s, home_hero_title: html }))}
+          />
         </div>
         <div>
           <label className="label">Hero Subtitle</label>
           <textarea className="input" rows={2} value={field('home_hero_subtitle')} onChange={update('home_hero_subtitle')} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Background Color (top-left)</label>
+            <input type="color" className="input h-10 p-1" value={field('home_hero_bg_from') || '#2c31ab'} onChange={update('home_hero_bg_from')} />
+          </div>
+          <div>
+            <label className="label">Background Color (bottom-right)</label>
+            <input type="color" className="input h-10 p-1" value={field('home_hero_bg_to') || '#4a5cf0'} onChange={update('home_hero_bg_to')} />
+          </div>
+        </div>
+        <div>
+          <label className="label">Hero Image (paste an image URL)</label>
+          <input className="input" value={field('home_hero_image')} onChange={update('home_hero_image')} placeholder="https://..." />
+          {field('home_hero_image') && (
+            <img src={field('home_hero_image')} alt="Hero preview" className="mt-2 h-32 w-full rounded-lg object-cover" />
+          )}
         </div>
         <div>
           <label className="label">Promo Banner Title</label>
