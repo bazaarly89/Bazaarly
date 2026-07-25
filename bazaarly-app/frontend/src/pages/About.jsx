@@ -19,7 +19,12 @@ export default function About() {
 
   useEffect(() => {
     Api.siteContent()
-      .then(({ content }) => setContent((c) => ({ ...c, ...content })))
+      .then(({ content }) => {
+        const cleaned = Object.fromEntries(
+          Object.entries(content || {}).filter(([, v]) => v !== '' && v != null)
+        );
+        setContent((c) => ({ ...c, ...cleaned }));
+      })
       .catch(() => {});
   }, []);
 
