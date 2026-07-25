@@ -1,0 +1,269 @@
+const express = require('express');
+const { v4: uuid } = require('uuid');
+const db = require('../db');
+const { adminRequired } = require('../middleware/auth');
+const router = express.Router();
+
+router.use(adminRequired);
+
+// ---------------- DASHBOARD ----------------
+router.get('/dashboard', (req, res) => {
+  const totalSales = db.prepare(`SELECT COALESCE(SUM(total),0) s FROM orders WHERE payment_status = 'paid' OR payment_method = 'cod'`).get().s;
+  const totalOrders = db.prepare('SELECT COUNT(*) c FROM orders').get().c;
+  const totalCustomers = db.prepare(`SELECT COUNT(*) c FROM users WHERE role = 'customer'`).get().c;
+  const totalProducts = db.prepare('SELECT COUNT(*) c FROM products').get().c;
+  const pendingOrders = db.prepare(`SELECT COUNT(*) c FROM orders WHERE status IN ('placed','confirmed')`).get().c;
+  const lowStock = db.prepare('SELECT COUNT(*) c FROM products WHERE stock <= 5').get().c;
+
+  const recentOrders = db.prepare(`
+    SELECT o.*, u.name as customer_name FROM orders o JOIN users u ON o.user_id = u.id
+    ORDER BY o.created_at DESC LIMIT 8`).all();
+
+  const salesByDay = db.prepare(`
+    SELECT date(created_at) as day, SUM(total) as amount
+    FROM orders GROUP BY day ORDER BY day DESC LIMIT 14`).all().reverse();
+
+  const topProducts = db.prepare(`
+    SELECT p.title, SUM(oi.quantity) as sold FROM order_items oi
+    JOIN products p ON oi.product_id = p.id
+    GROUP BY oi.product_id ORDER BY sold DESC LIMIT 5`).all();
+
+  res.json({ totalSales, totalOrders, totalCustomers, totalProducts, pendingOrders, lowStock, recentOrders, salesByDay, topProducts });
+});
+
+// ---------------- PRODUCTS ----------------
+router.get('/products', (req, res) => {
+  const products = db.prepare(`
+    SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id
+    ORDER BY p.created_at DESC`).all();
+  const withImages = products.map((p) => ({
+    ...p,
+    images: db.prepare('SELECT url FROM product_images WHERE product_id = ? ORDER BY position').all(p.id).map((i) => i.url),
+  }));
+  res.json({ products: withImages });
+});
+
+router.post('/products', (req, res) => {
+  const { title, description, categoryId, brand, price, mrp, stock, sku, images = [] } = req.body;
+  const id = uuid();
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString(36);
+  db.prepare(`INSERT INTO products (id,title,slug,description,category_id,brand,price,mrp,stock,sku) VALUES (?,?,?,?,?,?,?,?,?,?)`)
+    .run(id, title, slug, description || '', categoryId, brand || '', price, mrp, stock || 0, sku || '');
+  const insertImg = db.prepare('INSERT INTO product_images (id,product_id,url,position) VALUES (?,?,?,?)');
+  images.forEach((url, i) => insertImg.run(uuid(), id, url, i));
+  res.status(201).json({ product: db.prepare('SELECT * FROM products WHERE id = ?').get(id) });
+});
+
+router.put('/products/:id', (req, res) => {
+  const { title, description, categoryId, brand, price, mrp, stock, sku, isActive, images } = req.body;
+  db.prepare(`UPDATE products SET title=COALESCE(?,title), description=COALESCE(?,description),
+    category_id=COALESCE(?,category_id), brand=COALESCE(?,brand), price=COALESCE(?,price), mrp=COALESCE(?,mrp),
+    stock=COALESCE(?,stock), sku=COALESCE(?,sku), is_active=COALESCE(?,is_active) WHERE id = ?`)
+    .run(title, description, categoryId, brand, price, mrp, stock, sku, isActive, req.params.id);
+
+  if (Array.isArray(images)) {
+    db.prepare('DELETE FROM product_images WHERE product_id = ?').run(req.params.id);
+    const insertImg = db.prepare('INSERT INTO product_images (id,product_id,url,position) VALUES (?,?,?,?)');
+    images.forEach((url, i) => insertImg.run(uuid(), req.params.id, url, i));
+  }
+  res.json({ product: db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id) });
+});
+
+router.delete('/products/:id', (req, res) => {
+  db.prepare('DELETE FROM products WHERE id = ?').run(req.params.id);
+  res.json({ message: 'Product deleted' });
+});
+
+// ---------------- INVENTORY ----------------
+router.get('/inventory', (req, res) => {
+  const items = db.prepare('SELECT id, title, sku, stock, price FROM products ORDER BY stock ASC').all();
+  res.json({ items });
+});
+
+router.put('/inventory/:id', (req, res) => {
+  const { stock } = req.body;
+  db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(stock, req.params.id);
+  res.json({ message: 'Stock updated' });
+});
+
+// ---------------- CATEGORIES ----------------
+router.get('/categories', (req, res) => {
+  res.json({ categories: db.prepare('SELECT * FROM categories ORDER BY name').all() });
+});
+
+router.post('/categories', (req, res) => {
+  const { name, image, parentId } = req.body;
+  const id = uuid();
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  db.prepare('INSERT INTO categories (id,name,slug,image,parent_id) VALUES (?,?,?,?,?)')
+    .run(id, name, slug, image || '', parentId || null);
+  res.status(201).json({ category: db.prepare('SELECT * FROM categories WHERE id = ?').get(id) });
+});
+
+router.put('/categories/:id', (req, res) => {
+  const { name, image, parentId } = req.body;
+  db.prepare('UPDATE categories SET name=COALESCE(?,name), image=COALESCE(?,image), parent_id=? WHERE id = ?')
+    .run(name, image, parentId || null, req.params.id);
+  res.json({ category: db.prepare('SELECT * FROM categories WHERE id = ?').get(req.params.id) });
+});
+
+router.delete('/categories/:id', (req, res) => {
+  db.prepare('DELETE FROM categories WHERE id = ?').run(req.params.id);
+  res.json({ message: 'Category deleted' });
+});
+
+// ---------------- ORDERS ----------------
+router.get('/orders', (req, res) => {
+  const { status } = req.query;
+  let sql = `SELECT o.*, u.name as customer_name, u.email as customer_email FROM orders o JOIN users u ON o.user_id = u.id`;
+  const params = [];
+  if (status) { sql += ' WHERE o.status = ?'; params.push(status); }
+  sql += ' ORDER BY o.created_at DESC';
+  const orders = db.prepare(sql).all(...params);
+  res.json({ orders });
+});
+
+router.get('/orders/:id', (req, res) => {
+  const order = db.prepare(`SELECT o.*, u.name as customer_name, u.email as customer_email FROM orders o JOIN users u ON o.user_id = u.id WHERE o.id = ?`).get(req.params.id);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+  order.items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id);
+  order.tracking = db.prepare('SELECT * FROM order_tracking WHERE order_id = ? ORDER BY created_at').all(order.id);
+  res.json({ order });
+});
+
+const VALID_STATUSES = ['placed', 'confirmed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'];
+router.put('/orders/:id/status', (req, res) => {
+  const { status, note } = req.body;
+  if (!VALID_STATUSES.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(status, req.params.id);
+  db.prepare('INSERT INTO order_tracking (id,order_id,status,note) VALUES (?,?,?,?)')
+    .run(uuid(), req.params.id, status, note || `Order status updated to ${status}`);
+  const order = db.prepare('SELECT user_id FROM orders WHERE id = ?').get(req.params.id);
+  if (order) {
+    db.prepare('INSERT INTO notifications (id,user_id,title,message) VALUES (?,?,?,?)')
+      .run(uuid(), order.user_id, 'Order Update', `Your order status is now: ${status.replace(/_/g, ' ')}`);
+  }
+  res.json({ message: 'Order status updated' });
+});
+
+// ---------------- CUSTOMERS ----------------
+router.get('/customers', (req, res) => {
+  const customers = db.prepare(`
+    SELECT id, name, email, phone, created_at,
+    (SELECT COUNT(*) FROM orders WHERE orders.user_id = users.id) as order_count,
+    (SELECT COALESCE(SUM(total),0) FROM orders WHERE orders.user_id = users.id) as total_spent
+    FROM users WHERE role = 'customer' ORDER BY created_at DESC`).all();
+  res.json({ customers });
+});
+
+// ---------------- COUPONS ----------------
+router.get('/coupons', (req, res) => {
+  res.json({ coupons: db.prepare('SELECT * FROM coupons ORDER BY code').all() });
+});
+
+router.post('/coupons', (req, res) => {
+  const { code, type, value, minOrderValue, maxDiscount, expiresAt, usageLimit } = req.body;
+  const id = uuid();
+  db.prepare(`INSERT INTO coupons (id,code,type,value,min_order_value,max_discount,expires_at,usage_limit)
+    VALUES (?,?,?,?,?,?,?,?)`)
+    .run(id, code.toUpperCase(), type, value, minOrderValue || 0, maxDiscount || null, expiresAt || null, usageLimit || 0);
+  res.status(201).json({ coupon: db.prepare('SELECT * FROM coupons WHERE id = ?').get(id) });
+});
+
+router.put('/coupons/:id', (req, res) => {
+  const { isActive, value, minOrderValue, maxDiscount, expiresAt, usageLimit } = req.body;
+  db.prepare(`UPDATE coupons SET is_active=COALESCE(?,is_active), value=COALESCE(?,value),
+    min_order_value=COALESCE(?,min_order_value), max_discount=COALESCE(?,max_discount),
+    expires_at=COALESCE(?,expires_at), usage_limit=COALESCE(?,usage_limit) WHERE id = ?`)
+    .run(isActive, value, minOrderValue, maxDiscount, expiresAt, usageLimit, req.params.id);
+  res.json({ coupon: db.prepare('SELECT * FROM coupons WHERE id = ?').get(req.params.id) });
+});
+
+router.delete('/coupons/:id', (req, res) => {
+  db.prepare('DELETE FROM coupons WHERE id = ?').run(req.params.id);
+  res.json({ message: 'Coupon deleted' });
+});
+
+// ---------------- BANNERS ----------------
+router.get('/banners', (req, res) => {
+  res.json({ banners: db.prepare('SELECT * FROM banners ORDER BY position').all() });
+});
+router.post('/banners', (req, res) => {
+  const { title, image, link, position } = req.body;
+  const id = uuid();
+  db.prepare('INSERT INTO banners (id,title,image,link,position) VALUES (?,?,?,?,?)').run(id, title, image, link || '', position || 0);
+  res.status(201).json({ banner: db.prepare('SELECT * FROM banners WHERE id = ?').get(id) });
+});
+router.put('/banners/:id', (req, res) => {
+  const { title, image, link, position, isActive } = req.body;
+  db.prepare(`UPDATE banners SET title=COALESCE(?,title), image=COALESCE(?,image), link=COALESCE(?,link),
+    position=COALESCE(?,position), is_active=COALESCE(?,is_active) WHERE id = ?`)
+    .run(title, image, link, position, isActive, req.params.id);
+  res.json({ banner: db.prepare('SELECT * FROM banners WHERE id = ?').get(req.params.id) });
+});
+router.delete('/banners/:id', (req, res) => {
+  db.prepare('DELETE FROM banners WHERE id = ?').run(req.params.id);
+  res.json({ message: 'Banner deleted' });
+});
+
+// ---------------- ADVERTISEMENTS ----------------
+router.get('/advertisements', (req, res) => {
+  res.json({ advertisements: db.prepare('SELECT * FROM advertisements').all() });
+});
+router.post('/advertisements', (req, res) => {
+  const { title, image, link, placement } = req.body;
+  const id = uuid();
+  db.prepare('INSERT INTO advertisements (id,title,image,link,placement) VALUES (?,?,?,?,?)').run(id, title, image, link || '', placement || 'home_top');
+  res.status(201).json({ advertisement: db.prepare('SELECT * FROM advertisements WHERE id = ?').get(id) });
+});
+router.delete('/advertisements/:id', (req, res) => {
+  db.prepare('DELETE FROM advertisements WHERE id = ?').run(req.params.id);
+  res.json({ message: 'Advertisement deleted' });
+});
+
+// ---------------- REPORTS & ANALYTICS ----------------
+router.get('/reports/sales', (req, res) => {
+  const { from, to } = req.query;
+  let sql = 'SELECT date(created_at) as day, SUM(total) as revenue, COUNT(*) as orders FROM orders';
+  const params = [];
+  if (from && to) { sql += ' WHERE created_at BETWEEN ? AND ?'; params.push(from, to); }
+  sql += ' GROUP BY day ORDER BY day';
+  res.json({ rows: db.prepare(sql).all(...params) });
+});
+
+router.get('/reports/top-products', (req, res) => {
+  const rows = db.prepare(`
+    SELECT p.title, p.id, SUM(oi.quantity) as units_sold, SUM(oi.quantity * oi.price) as revenue
+    FROM order_items oi JOIN products p ON oi.product_id = p.id
+    GROUP BY oi.product_id ORDER BY revenue DESC LIMIT 10`).all();
+  res.json({ rows });
+});
+
+router.get('/analytics/overview', (req, res) => {
+  const conversionInputs = {
+    totalUsers: db.prepare(`SELECT COUNT(*) c FROM users WHERE role='customer'`).get().c,
+    usersWithOrders: db.prepare(`SELECT COUNT(DISTINCT user_id) c FROM orders`).get().c,
+  };
+  const categoryBreakdown = db.prepare(`
+    SELECT c.name, COUNT(oi.id) as items_sold FROM order_items oi
+    JOIN products p ON oi.product_id = p.id
+    JOIN categories c ON p.category_id = c.id
+    GROUP BY c.id ORDER BY items_sold DESC`).all();
+  res.json({ conversionInputs, categoryBreakdown });
+});
+
+// ---------------- SETTINGS ----------------
+router.get('/settings', (req, res) => {
+  const rows = db.prepare('SELECT * FROM settings').all();
+  res.json({ settings: Object.fromEntries(rows.map(r => [r.key, r.value])) });
+});
+router.put('/settings', (req, res) => {
+  const updates = req.body; // { key: value, ... }
+  const upsert = db.prepare(`INSERT INTO settings (key,value) VALUES (?,?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value`);
+  Object.entries(updates).forEach(([k, v]) => upsert.run(k, String(v)));
+  const rows = db.prepare('SELECT * FROM settings').all();
+  res.json({ settings: Object.fromEntries(rows.map(r => [r.key, r.value])) });
+});
+
+module.exports = router;
