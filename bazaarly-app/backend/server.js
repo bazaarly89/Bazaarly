@@ -22,6 +22,7 @@ app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/coupons', require('./routes/coupons'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/content', require('./routes/content'));
 app.use('/api/admin', require('./routes/admin'));
 
 // 404 handler
