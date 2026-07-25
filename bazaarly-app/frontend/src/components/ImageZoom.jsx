@@ -1,6 +1,13 @@
 import React, { useState, useRef } from 'react';
 
-export default function ImageZoom({ images = [] }) {
+const SIZE_CLASSES = {
+  small: 'max-w-[280px]',
+  medium: 'max-w-[420px]',
+  large: 'max-w-[560px]',
+  xl: 'max-w-[700px]',
+};
+
+export default function ImageZoom({ images = [], size = 'medium' }) {
   const [active, setActive] = useState(0);
   const [zoomStyle, setZoomStyle] = useState({});
   const [zooming, setZooming] = useState(false);
@@ -13,11 +20,13 @@ export default function ImageZoom({ images = [] }) {
     setZoomStyle({ transformOrigin: `${x}% ${y}%` });
   };
 
+  const sizeClass = SIZE_CLASSES[size] || SIZE_CLASSES.medium;
+
   return (
     <div>
       <div
         ref={containerRef}
-        className="relative aspect-square overflow-hidden rounded-xl2 bg-slate-100 cursor-zoom-in"
+        className={`relative aspect-square w-full ${sizeClass} overflow-hidden rounded-xl2 bg-slate-100 cursor-zoom-in`}
         onMouseEnter={() => setZooming(true)}
         onMouseLeave={() => setZooming(false)}
         onMouseMove={handleMouseMove}
@@ -25,7 +34,7 @@ export default function ImageZoom({ images = [] }) {
         <img
           src={images[active]}
           alt="Product"
-          className="h-full w-full object-cover transition-transform duration-200"
+          className="h-full w-full object-contain transition-transform duration-200"
           style={zooming ? { transform: 'scale(2)', ...zoomStyle } : {}}
         />
       </div>
