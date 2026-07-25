@@ -63,7 +63,6 @@ CREATE TABLE IF NOT EXISTS products (
   rating REAL DEFAULT 0,
   rating_count INTEGER DEFAULT 0,
   is_active INTEGER DEFAULT 1,
-  image_size TEXT DEFAULT 'medium',
   created_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -257,5 +256,31 @@ if (userCount === 0) {
   insertSetting.run('shipping_fee', '49');
   insertSetting.run('free_shipping_above', '999');
 }
+
+// ---- Editable website text (Home / About pages) ----
+// Uses INSERT OR IGNORE so this runs safely on every server start:
+// it only fills in keys that don't exist yet and never overwrites
+// text an admin has already edited from the dashboard.
+const defaultContent = {
+  home_hero_badge: 'New Season Arrivals',
+  home_hero_title: '<p>Shop Premium.</p><p>Live Beautifully.</p>',
+  home_hero_subtitle: 'Curated electronics, fashion, home essentials and more — with fast delivery and easy returns.',
+  home_hero_bg_from: '#2c31ab',
+  home_hero_bg_to: '#4a5cf0',
+  home_hero_image: 'https://picsum.photos/seed/hero-main/700/560',
+  home_promo_title: 'Season Sale — Up to 50% Off',
+  home_promo_text: 'Use code WELCOME10 at checkout for an extra 10% off.',
+  about_heading: 'About Dostivox',
+  about_para1: 'Dostivox is a modern e-commerce destination bringing together premium electronics, fashion, home essentials, beauty and sports products under one roof. We partner with trusted brands and focus on quality, fast delivery, and a shopping experience that feels effortless from browse to doorstep.',
+  about_para2: "Founded with a simple idea — shopping online should feel as good as the products themselves — we've built our platform around clean design, transparent pricing, and responsive support.",
+  about_stat1_num: '50K+',
+  about_stat1_label: 'Happy Customers',
+  about_stat2_num: '10K+',
+  about_stat2_label: 'Products',
+  about_stat3_num: '4.7★',
+  about_stat3_label: 'Average Rating',
+};
+const insertIfMissing = db.prepare(`INSERT OR IGNORE INTO settings (key,value) VALUES (?,?)`);
+Object.entries(defaultContent).forEach(([k, v]) => insertIfMissing.run(k, v));
 
 module.exports = db;
