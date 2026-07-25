@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 import { AdminApi } from '../../api/client';
 
 // Cloudinary unsigned upload config
@@ -18,7 +20,18 @@ async function uploadImageToCloudinary(file) {
   return data.secure_url;
 }
 
-const emptyForm = { title: '', description: '', categoryId: '', brand: '', price: '', mrp: '', stock: '', sku: '', images: [] };
+const emptyForm = { title: '', description: '', categoryId: '', brand: '', price: '', mrp: '', stock: '', sku: '', images: [], imageSize: 'medium' };
+
+const quillModules = {
+  toolbar: [
+    [{ header: [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ color: [] }, { background: [] }],
+    [{ list: 'ordered' }, { list: 'bullet' }],
+    ['link'],
+    ['clean'],
+  ],
+};
 
 export default function AdminProducts() {
   const [products, setProducts] = useState([]);
@@ -33,7 +46,7 @@ export default function AdminProducts() {
 
   const startEdit = (p) => {
     setEditingId(p.id);
-    setForm({ title: p.title, description: p.description, categoryId: p.category_id, brand: p.brand, price: p.price, mrp: p.mrp, stock: p.stock, sku: p.sku, images: p.images || [] });
+    setForm({ title: p.title, description: p.description, categoryId: p.category_id, brand: p.brand, price: p.price, mrp: p.mrp, stock: p.stock, sku: p.sku, images: p.images || [], imageSize: p.image_size || 'medium' });
     setShowForm(true);
   };
 
@@ -91,7 +104,17 @@ export default function AdminProducts() {
       {showForm && (
         <form onSubmit={submit} className="card mb-6 grid gap-3 p-6 sm:grid-cols-2">
           <input required placeholder="Title" className="input sm:col-span-2" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
-          <textarea placeholder="Description" className="input sm:col-span-2" value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} />
+
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm text-slate-500">Description</label>
+            <ReactQuill
+              theme="snow"
+              value={form.description}
+              onChange={(value) => setForm((f) => ({ ...f, description: value }))}
+              modules={quillModules}
+            />
+          </div>
+
           <select required className="input" value={form.categoryId} onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}>
             <option value="">Select Category</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -101,6 +124,7 @@ export default function AdminProducts() {
           <input required type="number" placeholder="MRP" className="input" value={form.mrp} onChange={(e) => setForm((f) => ({ ...f, mrp: e.target.value }))} />
           <input required type="number" placeholder="Stock" className="input" value={form.stock} onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))} />
           <input placeholder="SKU" className="input" value={form.sku} onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))} />
+
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm text-slate-500">Product Images</label>
             <input type="file" accept="image/*" multiple onChange={handleImageSelect} disabled={uploading} className="input" />
@@ -116,6 +140,17 @@ export default function AdminProducts() {
               </div>
             )}
           </div>
+
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm text-slate-500">Image Display Size (on product page)</label>
+            <select className="input" value={form.imageSize} onChange={(e) => setForm((f) => ({ ...f, imageSize: e.target.value }))}>
+              <option value="small">Small</option>
+              <option value="medium">Medium (default)</option>
+              <option value="large">Large</option>
+              <option value="xl">Extra Large</option>
+            </select>
+          </div>
+
           <div className="flex gap-3 sm:col-span-2">
             <button className="btn-primary">{editingId ? 'Update Product' : 'Create Product'}</button>
             <button type="button" onClick={() => setShowForm(false)} className="btn-ghost">Cancel</button>
