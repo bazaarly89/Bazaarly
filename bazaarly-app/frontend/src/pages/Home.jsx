@@ -30,7 +30,10 @@ export default function Home() {
       ]);
       setCategories(categories);
       setProducts(products);
-      setContent({ ...DEFAULT_CONTENT, ...siteContent.content });
+      const cleaned = Object.fromEntries(
+        Object.entries(siteContent.content || {}).filter(([, v]) => v !== '' && v != null)
+      );
+      setContent({ ...DEFAULT_CONTENT, ...cleaned });
       setLoading(false);
     })();
   }, []);
