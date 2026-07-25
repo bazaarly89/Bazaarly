@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
+import ReactQuill from 'react-quill';
+import ReactQuill/dist-quill.snow.css';
 import { AdminApi } from '../../api/client';
 
 // Cloudinary unsigned upload config
