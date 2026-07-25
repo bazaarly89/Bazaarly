@@ -155,15 +155,17 @@ CREATE TABLE IF NOT EXISTS order_tracking (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+
 CREATE TABLE IF NOT EXISTS banners (
   id TEXT PRIMARY KEY,
   title TEXT,
+  tag TEXT,
   image TEXT,
   link TEXT,
   position INTEGER DEFAULT 0,
-  is_active INTEGER DEFAULT 1
+  is_active INTEGER DEFAULT 1,
+  show_text INTEGER DEFAULT 1
 );
-
 CREATE TABLE IF NOT EXISTS advertisements (
   id TEXT PRIMARY KEY,
   title TEXT,
