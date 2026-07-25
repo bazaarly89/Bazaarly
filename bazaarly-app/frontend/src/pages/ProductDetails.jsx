@@ -16,9 +16,41 @@ export default function ProductDetails() {
   const [qty, setQty] = useState(1);
   const [reviewForm, setReviewForm] = useState({ rating: 5, title: '', comment: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [isWished, setIsWished] = useState(false);
+  const [shareMsg, setShareMsg] = useState('');
 
   const load = () => Api.product(slug).then(setData);
   useEffect(() => { load(); window.scrollTo(0, 0); }, [slug]);
+
+  // Check whether this product is already in the signed-in user's wishlist
+  useEffect(() => {
+    if (!user || !data) return;
+    Api.getWishlist()
+      .then(({ items }) => setIsWished(items.some((p) => p.id === data.product.id)))
+      .catch(() => {});
+  }, [user, data]);
+
+  const toggleWishlist = async () => {
+    if (!user) return navigate('/login');
+    if (isWished) {
+      await Api.removeWishlist(data.product.id);
+      setIsWished(false);
+    } else {
+      await Api.addWishlist(data.product.id);
+      setIsWished(true);
+    }
+  };
+
+  const shareProduct = async () => {
+    const shareData = { title: data.product.title, url: window.location.href };
+    if (navigator.share) {
+      try { await navigator.share(shareData); } catch (e) { /* user cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(window.location.href);
+      setShareMsg('Link copied!');
+      setTimeout(() => setShareMsg(''), 2000);
+    }
+  };
 
   if (!data) {
     return (
@@ -76,11 +108,20 @@ export default function ProductDetails() {
         <div>
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold uppercase tracking-wider text-brand-500">{product.brand}</p>
-            <div className="flex shrink-0 gap-2">
-              <button aria-label="Save to wishlist" className="rounded-full border border-slate-200 p-2.5 text-slate-500 transition hover:border-accent-400 hover:text-accent-500">
-                <Heart size={18} />
+            <div className="flex shrink-0 items-center gap-2">
+              {shareMsg && <span className="text-xs font-medium text-green-600">{shareMsg}</span>}
+              <button
+                onClick={toggleWishlist}
+                aria-label="Save to wishlist"
+                className={`rounded-full border p-2.5 transition ${isWished ? 'border-accent-400 bg-accent-50 text-accent-500' : 'border-slate-200 text-slate-500 hover:border-accent-400 hover:text-accent-500'}`}
+              >
+                <Heart size={18} fill={isWished ? 'currentColor' : 'none'} />
               </button>
-              <button aria-label="Share product" className="rounded-full border border-slate-200 p-2.5 text-slate-500 transition hover:border-brand-400 hover:text-brand-600">
+              <button
+                onClick={shareProduct}
+                aria-label="Share product"
+                className="rounded-full border border-slate-200 p-2.5 text-slate-500 transition hover:border-brand-400 hover:text-brand-600"
+              >
                 <Share2 size={18} />
               </button>
             </div>
