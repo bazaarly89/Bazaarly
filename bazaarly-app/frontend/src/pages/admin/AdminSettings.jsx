@@ -118,7 +118,10 @@ export default function AdminSettings() {
           <label className="label">Promo Banner Text</label>
           <textarea className="input" rows={2} value={field('home_promo_text')} onChange={update('home_promo_text')} />
         </div>
-
+<div>
+  <label className="label">Trending Section Title</label>
+  <input className="input" value={field('home_trending_title')} onChange={update('home_trending_title')} />
+</div>
         <h2 className="pt-2 font-semibold">Website Content — About Page</h2>
 
         <div>
