@@ -25,13 +25,13 @@ export default function ProductDetails() {
   const load = () => Api.product(slug).then(setData);
   useEffect(() => { load(); window.scrollTo(0, 0); }, [slug]);
 
-  // Load other products from the same category ("You may also like")
+  // Load other products to suggest ("You may also like") — from any category
   useEffect(() => {
-    if (!data?.product?.category_slug) { setRelatedProducts([]); return; }
-    Api.products({ category: data.product.category_slug, limit: 8 })
+    if (!data?.product?.id) { setRelatedProducts([]); return; }
+    Api.products({ limit: 12 })
       .then((r) => setRelatedProducts((r.products || []).filter((p) => p.id !== data.product.id)))
       .catch(() => setRelatedProducts([]));
-  }, [data?.product?.category_slug, data?.product?.id]);
+  }, [data?.product?.id]);
 
   // Check whether this product is already in the signed-in user's wishlist
   useEffect(() => {
@@ -232,7 +232,7 @@ export default function ProductDetails() {
         <div className="mt-20 border-t border-slate-100 pt-14">
           <h2 className="section-title mb-6">You may also like</h2>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {relatedProducts.slice(0, 8).map((p) => (
+            {relatedProducts.slice(0, 12).map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
