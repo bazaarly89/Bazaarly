@@ -95,3 +95,7 @@ export const bottomNavConfig = [
   { label: "Account", icon: "user", link: "/account" },
   { label: "Cart", icon: "cart", link: "/cart", badge: 1 },
 ];
+export const allProductsConfig = {
+  title: "All Products",
+  limit: 24,
+};
