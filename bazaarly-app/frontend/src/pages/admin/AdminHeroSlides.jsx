@@ -21,7 +21,7 @@ async function uploadImageToCloudinary(file) {
 
 const emptyForm = {
   mode: 'text', image: '', eyebrow: '', title: '', subtitle: '',
-  specsText: '', ctaText: '', ctaLink: '', position: 0,
+  specsText: '', ctaText: '', ctaLink: '', position: 0, imageFit: 'cover',
 };
 
 export default function AdminHeroSlides() {
