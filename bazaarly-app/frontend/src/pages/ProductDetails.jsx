@@ -18,6 +18,7 @@ export default function ProductDetails() {
   const [submitting, setSubmitting] = useState(false);
   const [isWished, setIsWished] = useState(false);
   const [shareMsg, setShareMsg] = useState('');
+  const [showFullDesc, setShowFullDesc] = useState(false);
 
   const load = () => Api.product(slug).then(setData);
   useEffect(() => { load(); window.scrollTo(0, 0); }, [slug]);
@@ -151,9 +152,15 @@ export default function ProductDetails() {
           <div>
             <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-400">Description</h2>
             <div
-              className="prose-content mt-2 leading-relaxed text-slate-600 [&_ol]:mt-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mt-3 [&_p:first-child]:mt-0 [&_strong]:font-semibold [&_strong]:text-slate-800 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:mt-1"
+              className={`prose-content mt-2 leading-relaxed text-slate-600 [&_ol]:mt-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mt-3 [&_p:first-child]:mt-0 [&_strong]:font-semibold [&_strong]:text-slate-800 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:mt-1 ${showFullDesc ? '' : 'line-clamp-4 overflow-hidden'}`}
               dangerouslySetInnerHTML={{ __html: product.description }}
             />
+            <button
+              onClick={() => setShowFullDesc((v) => !v)}
+              className="mt-2 text-sm font-semibold text-brand-600 hover:underline"
+            >
+              {showFullDesc ? 'Show less' : '...more'}
+            </button>
           </div>
 
           {attributes?.length > 0 && (
