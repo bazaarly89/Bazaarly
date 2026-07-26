@@ -25,7 +25,9 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/banners', require('./routes/banners'));
 app.use('/api/hero-slides', require('./routes/heroSlides'));
 app.use('/api/admin', require('./routes/admin'));
-
+app.use('/api/hero-slides', require('./routes/heroSlides'));
+app.use('/api/admin', require('./routes/admin'));
+app.use('/api/content', require('./routes/content'));   // ← ye naya
 // 404 handler
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
