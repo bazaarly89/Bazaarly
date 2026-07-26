@@ -269,3 +269,55 @@
     display: none;
   }
 }
+/* Mobile: compact hero with side breathing room, like a card */
+@media (max-width: 640px) {
+  .hero {
+    width: calc(100% - 24px);
+    margin: 12px auto 0;
+    height: 56vw;
+    max-height: 320px;
+    min-height: 200px;
+    border-radius: 16px;
+  }
+  .slide-content {
+    padding: 0 20px;
+    max-width: 100%;
+  }
+  .eyebrow {
+    font-size: 10px;
+    margin-bottom: 8px;
+  }
+  .eyebrow::before {
+    width: 16px;
+  }
+  .title {
+    font-size: clamp(20px, 6vw, 26px);
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+  .specs {
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .spec-chip {
+    font-size: 10px;
+    padding: 4px 9px;
+  }
+  .cta {
+    font-size: 12px;
+    padding: 9px 18px;
+  }
+  .progress-row {
+    left: 20px;
+    right: 20px;
+    bottom: 12px;
+  }
+  .arrow {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+}
