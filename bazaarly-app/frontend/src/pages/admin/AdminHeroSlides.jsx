@@ -48,6 +48,7 @@ export default function AdminHeroSlides() {
       ctaText: s.cta_text || '',
       ctaLink: s.cta_link || '',
       position: s.position ?? 0,
+imageFit: s.image_fit || 'cover',
     });
     setShowForm(true);
   };
