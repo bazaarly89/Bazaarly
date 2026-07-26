@@ -141,6 +141,16 @@ imageFit: form.imageFit,
           </div>
 
           {form.mode === 'text' && (
+          </div>
+)}
+<label className="mt-3 block text-sm text-slate-500">Image fit</label>
+<select className="input" value={form.imageFit} onChange={(e) => setForm((f) => ({ ...f, imageFit: e.target.value }))}>
+  <option value="cover">Fill box (may crop image)</option>
+  <option value="contain">Show full image (may leave empty space)</option>
+</select>
+</div>
+
+{form.mode === 'text' && (
             <>
               <input placeholder="Eyebrow (e.g. New Launch)" className="input" value={form.eyebrow} onChange={(e) => setForm((f) => ({ ...f, eyebrow: e.target.value }))} />
               <input placeholder="Slide order (0, 1, 2...)" type="number" className="input" value={form.position} onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))} />
