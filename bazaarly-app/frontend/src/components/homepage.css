@@ -265,3 +265,11 @@
   padding: 1px 5px;
   line-height: 1.3;
 }
+.all-products { padding: 24px 16px; }
+.all-products-title { font-size: 20px; margin-bottom: 16px; }
+.all-products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+}
+.all-products-loading, .all-products-error { padding: 24px 16px; text-align: center; }
