@@ -31,6 +31,7 @@ export default function Homepage({ customerName }) {
       <CategoryNav />
       <HeroCarousel />
       <SuggestedForYou customerName={customerName} />
+      <AllProducts />
       <PromoTiles />
       <div className="homepage-bottom-spacer" />
       <BottomNav />
