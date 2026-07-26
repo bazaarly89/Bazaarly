@@ -272,13 +272,15 @@ router.get('/hero-slides', (req, res) => {
   res.json({ slides: rows });
 });
 
-router.post('/hero-slides', (req, res) => {
-  const { mode, image, eyebrow, title, subtitle, specs = [], ctaText, ctaLink, position = 0 } = req.body;
-  const id = uuid();
-  db.prepare(`INSERT INTO hero_slides (id, mode, image, eyebrow, title, subtitle, specs, cta_text, cta_link, position, is_active)
-    VALUES (?,?,?,?,?,?,?,?,?,?,1)`)
-    .run(id, mode || 'image_text', image, eyebrow || '', title || '', subtitle || '', JSON.stringify(specs), ctaText || '', ctaLink || '', position);
-  res.status(201).json({ slide: db.prepare('SELECT * FROM hero_slides WHERE id = ?').get(id) });
+router.put('/hero-slides/:id', (req, res) => {
+  const { mode, image, eyebrow, title, subtitle, specs, ctaText, ctaLink, position, isActive, imageFit } = req.body;
+  db.prepare(`UPDATE hero_slides SET
+    mode=COALESCE(?,mode), image=COALESCE(?,image), eyebrow=COALESCE(?,eyebrow),
+    title=COALESCE(?,title), subtitle=COALESCE(?,subtitle),
+    specs=COALESCE(?,specs), cta_text=COALESCE(?,cta_text), cta_link=COALESCE(?,cta_link),
+    position=COALESCE(?,position), is_active=COALESCE(?,is_active), image_fit=COALESCE(?,image_fit) WHERE id = ?`)
+    .run(mode, image, eyebrow, title, subtitle, specs ? JSON.stringify(specs) : null, ctaText, ctaLink, position, isActive, imageFit, req.params.id);
+  res.json({ slide: db.prepare('SELECT * FROM hero_slides WHERE id = ?').get(req.params.id) });
 });
 
 router.put('/hero-slides/:id', (req, res) => {
