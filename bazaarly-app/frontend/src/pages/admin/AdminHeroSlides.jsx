@@ -81,6 +81,7 @@ imageFit: s.image_fit || 'cover',
       ctaText: form.ctaText,
       ctaLink: form.ctaLink,
       position: form.position,
+imageFit: form.imageFit,
     };
     if (editingId) await AdminApi.updateHeroSlide(editingId, payload);
     else await AdminApi.createHeroSlide(payload);
