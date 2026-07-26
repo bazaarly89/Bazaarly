@@ -283,16 +283,6 @@ router.put('/hero-slides/:id', (req, res) => {
   res.json({ slide: db.prepare('SELECT * FROM hero_slides WHERE id = ?').get(req.params.id) });
 });
 
-router.put('/hero-slides/:id', (req, res) => {
-  const { mode, image, eyebrow, title, subtitle, specs, ctaText, ctaLink, position, isActive } = req.body;
-  db.prepare(`UPDATE hero_slides SET
-    mode=COALESCE(?,mode), image=COALESCE(?,image), eyebrow=COALESCE(?,eyebrow),
-    title=COALESCE(?,title), subtitle=COALESCE(?,subtitle),
-    specs=COALESCE(?,specs), cta_text=COALESCE(?,cta_text), cta_link=COALESCE(?,cta_link),
-    position=COALESCE(?,position), is_active=COALESCE(?,is_active) WHERE id = ?`)
-    .run(mode, image, eyebrow, title, subtitle, specs ? JSON.stringify(specs) : null, ctaText, ctaLink, position, isActive, req.params.id);
-  res.json({ slide: db.prepare('SELECT * FROM hero_slides WHERE id = ?').get(req.params.id) });
-});
 
 router.delete('/hero-slides/:id', (req, res) => {
   db.prepare('DELETE FROM hero_slides WHERE id = ?').run(req.params.id);
