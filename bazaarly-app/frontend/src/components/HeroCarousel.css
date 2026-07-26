@@ -11,8 +11,8 @@
   --muted: #a7adb8;
   position: relative;
   width: 100%;
-  height: min(78vh, 620px);
-  min-height: 380px;
+  height: min(34vh, 380px);
+  min-height: 260px;
   overflow: hidden;
   background: var(--ink);
   border-radius: 0 0 22px 22px;
@@ -259,16 +259,6 @@
   color: var(--ink);
 }
 
-@media (max-width: 640px) {
-  .hero {
-    height: 62vh;
-    min-height: 340px;
-    border-radius: 0 0 14px 14px;
-  }
-  .arrow {
-    display: none;
-  }
-}
 /* Mobile: compact hero with side breathing room, like a card */
 @media (max-width: 640px) {
   .hero {
