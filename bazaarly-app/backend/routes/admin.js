@@ -271,7 +271,14 @@ router.get('/hero-slides', (req, res) => {
   const rows = db.prepare('SELECT * FROM hero_slides ORDER BY position').all();
   res.json({ slides: rows });
 });
-
+router.post('/hero-slides', (req, res) => {
+    const { mode, image, eyebrow, title, subtitle, specs = [], ctaText, ctaLink, position = 0, imageFit } = req.body;
+    const id = uuid();
+    db.prepare(`INSERT INTO hero_slides (id, mode, image, eyebrow, title, subtitle, specs, cta_text, cta_link, position, image_fit, is_active)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,1)`)
+      .run(id, mode || 'image_text', image, eyebrow || '', title || '', subtitle || '', JSON.stringify(specs), ctaText || '', ctaLink || '', position, imageFit || 'cover');
+    res.status(201).json({ slide: db.prepare('SELECT * FROM hero_slides WHERE id = ?').get(id) });
+  });
 router.put('/hero-slides/:id', (req, res) => {
   const { mode, image, eyebrow, title, subtitle, specs, ctaText, ctaLink, position, isActive, imageFit } = req.body;
   db.prepare(`UPDATE hero_slides SET
