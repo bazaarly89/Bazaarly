@@ -37,7 +37,7 @@ export default function AdminSettings() {
     const contentKeys = [
       'home_hero_badge', 'home_hero_title', 'home_hero_subtitle',
       'home_hero_bg_from', 'home_hero_bg_to', 'home_hero_image',
-      'home_promo_title', 'home_promo_text',
+      'home_promo_title', 'home_promo_text', 'home_trending_title',
       'about_heading', 'about_para1', 'about_para2',
       'about_stat1_num', 'about_stat1_label',
       'about_stat2_num', 'about_stat2_label',
