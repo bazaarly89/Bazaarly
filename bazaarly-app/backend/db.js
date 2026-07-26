@@ -201,7 +201,15 @@ CREATE TABLE IF NOT EXISTS hero_slides (
   is_active INTEGER DEFAULT 1
 );
 `);
-
+// ---- Safe migration: add image_fit to hero_slides if the table already existed without it ----
+try {
+  const heroCols = db.prepare("PRAGMA table_info(hero_slides)").all().map((c) => c.name);
+  if (!heroCols.includes('image_fit')) {
+    db.exec("ALTER TABLE hero_slides ADD COLUMN image_fit TEXT DEFAULT 'cover'");
+  }
+} catch (e) {
+  console.error('hero_slides image_fit migration failed:', e);
+}
 // ---- Safe migration: add is_active to categories if the table already existed without it ----
 try {
   const cols = db.prepare("PRAGMA table_info(categories)").all().map((c) => c.name);
