@@ -16,6 +16,7 @@ router.get('/', (req, res) => {
     title: r.title,
     subtitle: r.subtitle,
     specs: r.specs ? JSON.parse(r.specs) : [],
+    imageFit: r.image_fit || 'cover',
     ctaText: r.cta_text,
     ctaLink: r.cta_link,
   }));
