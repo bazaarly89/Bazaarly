@@ -138,11 +138,7 @@ imageFit: form.imageFit,
                 <button type="button" onClick={() => setForm((f) => ({ ...f, image: '' }))} className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs text-white">×</button>
               </div>
             )}
-          </div>
-
-          {form.mode === 'text' && (
-          </div>
-)}
+         
 <label className="mt-3 block text-sm text-slate-500">Image fit</label>
 <select className="input" value={form.imageFit} onChange={(e) => setForm((f) => ({ ...f, imageFit: e.target.value }))}>
   <option value="cover">Fill box (may crop image)</option>
