@@ -45,7 +45,7 @@ export const Api = {
 
   // homepage banners (public, read-only)
   banners: () => unwrap(api.get('/banners')),
-
+siteContent: () => unwrap(api.get('/content')),
   // homepage hero slideshow (public, read-only)
   heroSlides: () => unwrap(api.get('/hero-slides')),
 
