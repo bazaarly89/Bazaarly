@@ -14,6 +14,7 @@ const DEFAULT_CONTENT = {
   home_hero_image: 'https://picsum.photos/seed/hero-main/700/560',
   home_promo_title: 'Season Sale — Up to 50% Off',
   home_promo_text: 'Use code WELCOME10 at checkout for an extra 10% off.',
+  home_trending_title: 'Trending Now',
 };
 
 export default function Home() {
