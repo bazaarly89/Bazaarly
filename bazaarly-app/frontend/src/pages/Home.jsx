@@ -42,20 +42,20 @@ export default function Home() {
 
   return (
     <div>
-     <HeroCarousel/>
+      <HeroCarousel />
       {/* Categories */}
       <section className="container-app py-14">
         <div className="mb-8 flex items-center justify-between">
           <h2 className="section-title">Shop by Category</h2>
           <Link to="/categories" className="text-sm font-semibold text-brand-600 hover:underline">View all</Link>
         </div>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(84px,1fr))] gap-x-3 gap-y-5 sm:grid-cols-[repeat(auto-fill,minmax(96px,1fr))]">
           {categories.map((c) => (
-            <Link key={c.id} to={`/categories/${c.slug}`} className="group card overflow-hidden text-center">
-              <div className="aspect-square overflow-hidden">
-                <img src={c.image} alt={c.name} className="h-full w-full object-cover transition group-hover:scale-110" />
+            <Link key={c.id} to={`/categories/${c.slug}`} className="group flex flex-col items-center text-center">
+              <div className="aspect-square w-full max-w-[88px] overflow-hidden rounded-full border border-slate-100 bg-slate-50 sm:max-w-[104px]">
+                <img src={c.image} alt={c.name} className="h-full w-full object-cover transition group-hover:scale-110" loading="lazy" />
               </div>
-              <p className="py-3 text-sm font-semibold">{c.name}</p>
+              <p className="mt-2 line-clamp-2 text-xs font-medium text-slate-700 sm:text-sm">{c.name}</p>
             </Link>
           ))}
         </div>
@@ -63,7 +63,7 @@ export default function Home() {
 
       {/* Promo banner */}
       <section className="container-app pb-14">
-        <div className="relative overflow-hidden rounded-xl2 bg-gradient-to-r from-accent-500 to-accent-400 p-10 text-white shadow-card">
+        <div className="relative overflow-hidden rounded-xl2 bg-gradient-to-r from-accent-500 to-accent-400 p-10 text-white">
           <div className="max-w-lg">
             <h3 className="font-display text-3xl font-semibold">{content.home_promo_title}</h3>
             <p className="mt-2 text-white/90">{content.home_promo_text}</p>
