@@ -75,7 +75,7 @@ export default function Home() {
       {/* Featured products */}
       <section className="container-app pb-20">
         <div className="mb-8 flex items-center justify-between">
-          <h2 className="section-title">Trending Now</h2>
+          <h2 className="section-title">{content.home_trending_title}</h2>
           <Link to="/products" className="text-sm font-semibold text-brand-600 hover:underline">View all</Link>
         </div>
         {loading ? (
