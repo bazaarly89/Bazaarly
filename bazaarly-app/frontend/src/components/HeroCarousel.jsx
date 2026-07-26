@@ -1,109 +1,100 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import "./HeroCarousel.css";
-import { heroSlides } from "./heroSlides.config";
+import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Api } from '../api/client';
+import { heroSlides as fallbackSlides } from './heroSlides.config';
+import './HeroCarousel.css';
 
-/**
- * Premium auto-sliding hero banner.
- *
- * -> Sab kuch "heroSlides.config.js" file se aata hai. Naya slide add karna ho,
- *    text badalna ho, ya text hide/show karna ho — sirf us file ko edit karo,
- *    is component ka code chhedne ki zarurat nahi.
- *
- * -> mode: "text"   => title/subtitle/specs/button overlay ke saath dikhta hai
- * -> mode: "banner" => sirf image dikhti hai (pura pamphlet/poster design), koi text overlay nahi
- *
- * Agar slides admin panel (backend /admin/banners) se aa rahe hain, to
- * `slides` prop pass kar do — wahi schema use hoga jo heroSlides.config.js me hai.
- */
-export default function HeroCarousel({ slides = heroSlides, duration = 5000 }) {
-  const [current, setCurrent] = useState(0);
+const AUTOPLAY_MS = 5000;
+
+export default function HeroCarousel() {
+  const [slides, setSlides] = useState(fallbackSlides);
+  const [index, setIndex] = useState(0);
   const timerRef = useRef(null);
 
-  const goTo = useCallback(
-    (i) => {
-      const next = (i + slides.length) % slides.length;
-      setCurrent(next);
-    },
-    [slides.length]
-  );
+  // Load slides from the admin-managed backend. If none are set up yet
+  // (or the request fails), keep showing the local fallback slides so the
+  // homepage never looks broken.
+  useEffect(() => {
+    Api.heroSlides()
+      .then((r) => { if (r.slides && r.slides.length > 0) setSlides(r.slides); })
+      .catch(() => {});
+  }, []);
 
-  const resetTimer = useCallback(() => {
-    clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => goTo(current + 1), duration);
-  }, [current, duration, goTo]);
+  const restartAutoplay = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (slides.length <= 1) return;
+    timerRef.current = setInterval(() => {
+      setIndex((i) => (i + 1) % slides.length);
+    }, AUTOPLAY_MS);
+  };
 
   useEffect(() => {
-    resetTimer();
-    return () => clearTimeout(timerRef.current);
-  }, [current, resetTimer]);
+    restartAutoplay();
+    return () => clearInterval(timerRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slides.length]);
+
+  const goTo = (i) => { setIndex(i); restartAutoplay(); };
+  const prev = () => goTo((index - 1 + slides.length) % slides.length);
+  const next = () => goTo((index + 1) % slides.length);
 
   if (!slides || slides.length === 0) return null;
 
   return (
-    <div
-      className="hero"
-      onMouseEnter={() => clearTimeout(timerRef.current)}
-      onMouseLeave={resetTimer}
-    >
-      {slides.map((s, i) => (
-        <div
-          key={s.id ?? i}
-          className={`slide mode-${s.mode} ${i === current ? "active" : ""}`}
-        >
-          <div
-            className="slide-bg"
-            style={{ backgroundImage: `url(${s.image})` }}
-          />
-          {s.mode === "text" && (
-            <>
-              <div className="overlay" />
-              <div className="slide-content">
-                {s.eyebrow && <span className="eyebrow">{s.eyebrow}</span>}
-                {s.title && <h1 className="title">{s.title}</h1>}
-                {s.subtitle && <p className="subtitle">{s.subtitle}</p>}
-                {s.specs?.length > 0 && (
-                  <div className="specs">
-                    {s.specs.map((sp, idx) => (
-                      <span className="spec-chip" key={idx}>
-                        {sp}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {s.ctaText && (
-                  <a className="cta" href={s.ctaLink || "#"}>
-                    {s.ctaText} &rarr;
-                  </a>
-                )}
-              </div>
-            </>
-          )}
-          {s.mode === "banner" && s.ctaLink && (
-            <a className="banner-link" href={s.ctaLink} aria-label="Offer banner" />
-          )}
-        </div>
-      ))}
+    <div className="hero">
+      {slides.map((slide, i) => {
+        const isActive = i === index;
+        const isBanner = slide.mode === 'banner';
+        return (
+          <div key={slide.id} className={`slide ${isActive ? 'active' : ''} ${isBanner ? 'mode-banner' : ''}`}>
+            <div className="slide-bg" style={{ backgroundImage: `url(${slide.image})` }} />
 
-      <div className="progress-row">
-        {slides.map((_, i) => (
-          <div
-            key={i}
-            className={`progress-track ${i === current ? "active" : ""} ${
-              i < current ? "done" : ""
-            }`}
-            onClick={() => goTo(i)}
-          >
-            <div className="progress-fill" />
+            {isBanner ? (
+              slide.ctaLink && <Link to={slide.ctaLink} className="banner-link" aria-label="View offer" />
+            ) : (
+              <>
+                <div className="overlay" />
+                <div className="slide-content">
+                  {slide.eyebrow && <p className="eyebrow">{slide.eyebrow}</p>}
+                  {slide.title && <h1 className="title">{slide.title}</h1>}
+                  {slide.subtitle && <p className="subtitle">{slide.subtitle}</p>}
+                  {slide.specs && slide.specs.length > 0 && (
+                    <div className="specs">
+                      {slide.specs.map((spec, si) => (
+                        <span key={si} className="spec-chip">{spec}</span>
+                      ))}
+                    </div>
+                  )}
+                  {slide.ctaText && slide.ctaLink && (
+                    <Link to={slide.ctaLink} className="cta">{slide.ctaText}</Link>
+                  )}
+                </div>
+              </>
+            )}
           </div>
-        ))}
-      </div>
+        );
+      })}
 
-      <div className="arrow left" onClick={() => goTo(current - 1)}>
-        &#8249;
-      </div>
-      <div className="arrow right" onClick={() => goTo(current + 1)}>
-        &#8250;
-      </div>
+      {slides.length > 1 && (
+        <div className="progress-row">
+          {slides.map((slide, i) => (
+            <div
+              key={slide.id}
+              className={`progress-track ${i === index ? 'active' : ''} ${i < index ? 'done' : ''}`}
+              onClick={() => goTo(i)}
+            >
+              <div className="progress-fill" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {slides.length > 1 && (
+        <>
+          <button className="arrow left" onClick={prev} aria-label="Previous slide">‹</button>
+          <button className="arrow right" onClick={next} aria-label="Next slide">›</button>
+        </>
+      )}
     </div>
   );
 }
