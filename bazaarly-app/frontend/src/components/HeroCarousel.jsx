@@ -46,10 +46,11 @@ export default function HeroCarousel() {
         const isActive = i === index;
         const isBanner = slide.mode === 'banner';
         return (
-          <div
-  className={`slide-bg ${slide.imageFit === 'contain' ? 'fit-contain' : ''}`}
-  style={{ backgroundImage: `url(${slide.image})` }}
-/>
+          <div key={slide.id} className={`slide ${isActive ? 'active' : ''} ${isBanner ? 'mode-banner' : ''}`}>
+            <div
+              className={`slide-bg ${slide.imageFit === 'contain' ? 'fit-contain' : ''}`}
+              style={{ backgroundImage: `url(${slide.image})` }}
+            />
             {isBanner ? (
               slide.ctaLink && <Link to={slide.ctaLink} className="banner-link" aria-label="View offer" />
             ) : (
