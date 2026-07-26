@@ -54,6 +54,15 @@
 .slide.mode-banner .slide-bg {
   filter: brightness(1);
 }
+.slide-bg.fit-contain {
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-color: #0b0d12;
+}
+.slide.active .slide-bg.fit-contain {
+  animation: none;
+  transform: scale(1);
+}
 .banner-link {
   position: absolute;
   inset: 0;
