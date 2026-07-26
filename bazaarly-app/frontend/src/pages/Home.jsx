@@ -28,7 +28,7 @@ export default function Home() {
       const [{ categories }, { products }, siteContent] = await Promise.all([
         Api.categories(),
         Api.products({ sort: 'popular', limit: 8 }),
-        Promise.resolve({ content: {} }),
+        Api.siteContent(),
       ]);
       setCategories(categories);
       setProducts(products);
