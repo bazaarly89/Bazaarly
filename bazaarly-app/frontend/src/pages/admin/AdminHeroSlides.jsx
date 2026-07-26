@@ -44,7 +44,7 @@ export default function AdminHeroSlides() {
       eyebrow: s.eyebrow || '',
       title: s.title || '',
       subtitle: s.subtitle || '',
-      specsText: (s.specs || []).join(', '),
+      specsText: (() => { try { return (JSON.parse(s.specs || '[]')).join(', '); } catch { return ''; } })(),
       ctaText: s.cta_text || '',
       ctaLink: s.cta_link || '',
       position: s.position ?? 0,
