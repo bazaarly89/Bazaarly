@@ -4,6 +4,7 @@ import TopBar from "./TopBar";
 import SearchBar from "./SearchBar";
 import CategoryNav from "./CategoryNav";
 import HeroCarousel from "./HeroCarousel"; // from the hero-carousel set given earlier
+import AllProducts from "./AllProducts";
 import SuggestedForYou from "./SuggestedForYou";
 import PromoTiles from "./PromoTiles";
 import BottomNav from "./BottomNav";
