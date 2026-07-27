@@ -51,7 +51,7 @@ export default function ForgotPassword() {
             <h1 className="font-display text-2xl font-semibold text-center">Reset Password</h1>
             <p className="mt-1 text-center text-sm text-slate-500">{message}</p>
             <form onSubmit={resetPassword} className="mt-6 space-y-4">
-              <div><label className="label">Reset Token</label><input required className="input" value={token} onChange={(e) => setToken(e.target.value)} placeholder="Paste token from email" /></div>
+              <div><label className="label">Enter OTP</label><input required className="input" value={token} onChange={(e) => setToken(e.target.value)} placeholder="Enter the 6-digit OTP sent to your email" /></div>
               <div><label className="label">New Password</label><input type="password" required minLength={6} className="input" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
               {error && <p className="text-sm text-red-500">{error}</p>}
               <button className="btn-primary w-full" disabled={loading}>{loading ? 'Resetting…' : 'Reset Password'}</button>
