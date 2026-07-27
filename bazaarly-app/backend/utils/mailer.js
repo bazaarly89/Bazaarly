@@ -21,7 +21,7 @@ async function sendOtpEmail(to, code, purpose) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'Dostivox <onboarding@resend.dev>',
+      from: 'Dostivox <noreply@dostivox.com>'
       to: [to],
       subject,
       html,
