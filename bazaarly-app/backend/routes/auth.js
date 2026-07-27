@@ -1,17 +1,21 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 const { v4: uuid } = require('uuid');
 const { body, validationResult } = require('express-validator');
 const db = require('../db');
 const { authRequired } = require('../middleware/auth');
+const { sendOtpEmail } = require('../utils/mailer');
 
 const router = express.Router();
 
 function signUserToken(user) {
   return jwt.sign({ id: user.id, email: user.email, role: user.role, name: user.name },
     process.env.JWT_SECRET, { expiresIn: '7d' });
+}
+
+function generateOtp() {
+  return String(Math.floor(100000 + Math.random() * 900000)); // 6-digit code
 }
 
 // ---------- REGISTER ----------
@@ -49,32 +53,59 @@ router.post('/login', body('email').isEmail(), body('password').notEmpty(), (req
   res.json({ token: signUserToken(user), user: { id: user.id, name: user.name, email: user.email, role: user.role } });
 });
 
-// ---------- FORGOT PASSWORD ----------
-router.post('/forgot-password', body('email').isEmail(), (req, res) => {
+// ---------- FORGOT PASSWORD (sends a 6-digit OTP to the user's email) ----------
+router.post('/forgot-password', body('email').isEmail(), async (req, res) => {
   const { email } = req.body;
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-  // Always respond success to avoid email enumeration
-  if (!user) return res.json({ message: 'If that email exists, a reset link has been sent.' });
 
-  const token = crypto.randomBytes(32).toString('hex');
-  const expiry = Date.now() + 1000 * 60 * 30; // 30 min
-  db.prepare('UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE id = ?').run(token, expiry, user.id);
+  // Always respond the same way to avoid revealing whether an email is registered
+  const genericMessage = { message: 'If that email exists, an OTP has been sent.' };
+  if (!user) return res.json(genericMessage);
 
-  // In production this would be emailed. Returned here for demo purposes.
-  res.json({ message: 'If that email exists, a reset link has been sent.', demo_reset_token: token });
-});
+  const code = generateOtp();
+  const expiry = Date.now() + 1000 * 60 * 10; // 10 minutes
+  db.prepare('INSERT INTO otps (id, email, code, purpose, expires_at) VALUES (?,?,?,?,?)')
+    .run(uuid(), email, code, 'reset_password', expiry);
 
-router.post('/reset-password', body('token').notEmpty(), body('password').isLength({ min: 6 }), (req, res) => {
-  const { token, password } = req.body;
-  const user = db.prepare('SELECT * FROM users WHERE reset_token = ?').get(token);
-  if (!user || !user.reset_token_expiry || user.reset_token_expiry < Date.now()) {
-    return res.status(400).json({ error: 'Reset link is invalid or expired' });
+  try {
+    await sendOtpEmail(email, code, 'reset_password');
+  } catch (e) {
+    console.error('Failed to send OTP email:', e.message);
+    return res.status(500).json({ error: 'Could not send OTP email. Please try again shortly.' });
   }
-  const hash = bcrypt.hashSync(password, 10);
-  db.prepare('UPDATE users SET password = ?, reset_token = NULL, reset_token_expiry = NULL WHERE id = ?')
-    .run(hash, user.id);
-  res.json({ message: 'Password updated successfully' });
+
+  res.json(genericMessage);
 });
+
+// ---------- RESET PASSWORD (verify OTP + set new password in one step) ----------
+router.post('/reset-password',
+  body('email').isEmail(),
+  body('otp').notEmpty(),
+  body('password').isLength({ min: 6 }),
+  (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+    const { email, otp, password } = req.body;
+
+    const record = db.prepare(
+      `SELECT * FROM otps WHERE email = ? AND code = ? AND purpose = 'reset_password' AND used = 0
+       ORDER BY created_at DESC LIMIT 1`
+    ).get(email, otp);
+
+    if (!record || record.expires_at < Date.now()) {
+      return res.status(400).json({ error: 'OTP is invalid or expired' });
+    }
+
+    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    if (!user) return res.status(400).json({ error: 'OTP is invalid or expired' });
+
+    const hash = bcrypt.hashSync(password, 10);
+    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hash, user.id);
+    db.prepare('UPDATE otps SET used = 1 WHERE id = ?').run(record.id);
+
+    res.json({ message: 'Password updated successfully' });
+  });
 
 // ---------- CURRENT USER ----------
 router.get('/me', authRequired, (req, res) => {
