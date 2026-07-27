@@ -187,6 +187,16 @@ CREATE TABLE IF NOT EXISTS settings (
   value TEXT
 );
 
+CREATE TABLE IF NOT EXISTS otps (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  code TEXT NOT NULL,
+  purpose TEXT NOT NULL, -- 'reset_password' | 'login'
+  expires_at INTEGER NOT NULL,
+  used INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS hero_slides (
   id TEXT PRIMARY KEY,
   mode TEXT DEFAULT 'text',   -- 'text' (image + title/subtitle overlay) or 'banner' (image only)
@@ -194,13 +204,14 @@ CREATE TABLE IF NOT EXISTS hero_slides (
   eyebrow TEXT,
   title TEXT,
   subtitle TEXT,
-  specs TEXT,                 -- stored as JSON string, e.g. ["40Hrs Battery","ANC"]
+  specs TEXT,                -- stored as JSON string, e.g. ["40Hrs Battery","ANC"]
   cta_text TEXT,
   cta_link TEXT,
   position INTEGER DEFAULT 0,
   is_active INTEGER DEFAULT 1
 );
 `);
+
 // ---- Safe migration: add image_fit to hero_slides if the table already existed without it ----
 try {
   const heroCols = db.prepare("PRAGMA table_info(hero_slides)").all().map((c) => c.name);
@@ -210,6 +221,7 @@ try {
 } catch (e) {
   console.error('hero_slides image_fit migration failed:', e);
 }
+
 // ---- Safe migration: add is_active to categories if the table already existed without it ----
 try {
   const cols = db.prepare("PRAGMA table_info(categories)").all().map((c) => c.name);
@@ -268,7 +280,7 @@ if (userCount === 0) {
     const slug = p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + idx;
     insertProduct.run(
       id, p.title, slug,
-      `${p.title} - premium quality product with fast delivery and easy returns. Designed for everyday performance and durability.`,
+      `${p.title} - premium quality product with fast delivery and easy returns. Designed for everyday performance and reliability.`,
       catIds[p.cat], p.brand, p.price, p.mrp, 50 + idx, `SKU-${1000 + idx}`,
       (3.8 + (idx % 5) * 0.2).toFixed(1), 20 + idx * 3
     );
@@ -282,8 +294,8 @@ if (userCount === 0) {
   insertCoupon.run(uuid(), 'FLAT100', 'flat', 100, 999, null, 1000);
 
   const insertBanner = db.prepare(`INSERT INTO banners (id,title,image,link,position,is_active) VALUES (?,?,?,?,?,1)`);
-  insertBanner.run(uuid(), 'Big Season Sale - Up to 50% Off', 'https://picsum.photos/seed/banner1/1600/500', '/products', 0);
-  insertBanner.run(uuid(), 'New Electronics Arrivals', 'https://picsum.photos/seed/banner2/1600/500', '/categories/electronics', 1);
+  insertBanner.run(uuid(), 'Big Season Sale - Up to 50% Off', 'https://picsum.photos/seed/banner1/1600/500', '/products', 0, 1);
+  insertBanner.run(uuid(), 'New Electronics Arrivals', 'https://picsum.photos/seed/banner2/1600/500', '/categories/electronics', 1, 1);
 
   const insertSetting = db.prepare(`INSERT INTO settings (key,value) VALUES (?,?)`);
   insertSetting.run('store_name', 'Dostivox');
