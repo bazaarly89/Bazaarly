@@ -26,14 +26,7 @@ export default function ForgotPassword() {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      const resetPassword = async (e) => {
-  e.preventDefault();
-  setLoading(true); setError('');
-  try {
-    await Api.resetPassword({ email, otp: token, password });
-    setStep('done');
-  } catch (e) { setError(e.message); } finally { setLoading(false); }
-};
+      await Api.resetPassword({ email, otp: token, password });
       setStep('done');
     } catch (e) { setError(e.message); } finally { setLoading(false); }
   };
