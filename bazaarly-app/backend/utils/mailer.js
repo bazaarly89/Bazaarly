@@ -1,34 +1,8 @@
 // backend/utils/mailer.js
-// Sends OTP emails using Gmail SMTP (free — up to ~500 emails/day on a normal Gmail account).
-//
-// SETUP (one-time, free):
-// 1. Use (or create) a Gmail account for the store, e.g. dostivox.noreply@gmail.com
-// 2. Turn on 2-Step Verification on that Google account (Google Account -> Security)
-// 3. Go to https://myaccount.google.com/apppasswords and generate an "App Password"
-//    (choose app: Mail, device: Other -> "Dostivox Backend")
-// 4. Google gives you a 16-character password. Add these to your backend .env (and Railway variables):
-//      GMAIL_USER=dostivox.noreply@gmail.com
-//      GMAIL_APP_PASSWORD=the16charapppassword
-//
-// Nothing else to configure — this file reads those two env vars.
+// Sends OTP emails using Resend API — works reliably on Railway (HTTPS-based, no SMTP blocking).
 
-const nodemailer = require('nodemailer');
-
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
-});
 async function sendOtpEmail(to, code, purpose) {
-  const subject =
-    purpose === 'login' ? 'Your Dostivox login OTP' : 'Your Dostivox password reset OTP';
+  const subject = purpose === 'login' ? 'Your Dostivox login OTP' : 'Your Dostivox password reset OTP';
 
   const html = `
     <div style="font-family: Arial, sans-serif; font-size: 15px; color: #222;">
@@ -40,13 +14,24 @@ async function sendOtpEmail(to, code, purpose) {
     </div>
   `;
 
-  await transporter.sendMail({
-    from: `"Dostivox" <${process.env.GMAIL_USER}>`,
-    to,
-    subject,
-    html,
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'Dostivox <onboarding@resend.dev>',
+      to: [to],
+      subject,
+      html,
+    }),
   });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Resend send failed: ${response.status} ${errText}`);
+  }
 }
 
 module.exports = { sendOtpEmail };
-
