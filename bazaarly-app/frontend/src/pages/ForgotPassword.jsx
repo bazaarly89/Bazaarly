@@ -26,11 +26,14 @@ export default function ForgotPassword() {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      // GALAT (abhi):
-await Api.resetPassword({ token, password });
-
-// SAHI:
-await Api.resetPassword({ email, otp: token, password });
+      const resetPassword = async (e) => {
+  e.preventDefault();
+  setLoading(true); setError('');
+  try {
+    await Api.resetPassword({ email, otp: token, password });
+    setStep('done');
+  } catch (e) { setError(e.message); } finally { setLoading(false); }
+};
       setStep('done');
     } catch (e) { setError(e.message); } finally { setLoading(false); }
   };
