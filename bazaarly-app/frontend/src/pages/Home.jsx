@@ -60,31 +60,31 @@ export default function Homepage() {
     toastTimer.current = setTimeout(() => setToast(""), 2200);
   };
 
-const addToCart = async (product) => {
-  try {
-    await Api.addToCart(product.id, 1);
-    showToast(product.title + " added to cart");
-    setAddedId(product.id);
-    setTimeout(() => setAddedId(null), 1200);
-  } catch (e) {
-    showToast("Please sign in to add to cart");
-    if (!localStorage.getItem("token")) {
-      setTimeout(() => navigate("/login"), 900);
+  const addToCart = async (product) => {
+    try {
+      await Api.addToCart(product.id, 1);
+      showToast(product.title + " added to cart");
+      setAddedId(product.id);
+      setTimeout(() => setAddedId(null), 1200);
+    } catch (e) {
+      showToast("Please sign in to add to cart");
+      if (!localStorage.getItem("token")) {
+        setTimeout(() => navigate("/login"), 900);
+      }
     }
-  }
-};
+  };
 
-const addToWishlist = async (product) => {
-  try {
-    await Api.addWishlist(product.id);
-    showToast(product.title + " added to wishlist");
-  } catch (e) {
-    showToast("Please sign in to use wishlist");
-    if (!localStorage.getItem("token")) {
-      setTimeout(() => navigate("/login"), 900);
+  const addToWishlist = async (product) => {
+    try {
+      await Api.addWishlist(product.id);
+      showToast(product.title + " added to wishlist");
+    } catch (e) {
+      showToast("Please sign in to use wishlist");
+      if (!localStorage.getItem("token")) {
+        setTimeout(() => navigate("/login"), 900);
+      }
     }
-  }
-};
+  };
 
   const goToCategory = (cat) => navigate(`/products?category=${cat.slug}`);
   const goToProduct = (p) => navigate(`/products/${p.slug}`);
@@ -148,6 +148,7 @@ const addToWishlist = async (product) => {
           )}
         </div>
       )}
+
       {/* SHOP BY CATEGORY — admin-editable via /admin/categories */}
       {categories.length > 0 && (
         <div className="dv-section">
@@ -228,7 +229,7 @@ const addToWishlist = async (product) => {
         </div>
       )}
 
-      {/* WHY CHOOSE — static, not admin-driven (nothing in backend tracks this) */}
+      {/* WHY CHOOSE - static, not admin-driven (nothing in backend tracks this) */}
       <div className="dv-section">
         <div className="dv-sec-head"><h2>Why Choose Dostivox?</h2></div>
         <div className="dv-why-grid">
@@ -239,7 +240,7 @@ const addToWishlist = async (product) => {
         </div>
       </div>
 
-{toast && (
+      {toast && (
         <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#111827", color: "#fff", padding: "10px 20px", borderRadius: 9999 }}>
           {toast}
         </div>
