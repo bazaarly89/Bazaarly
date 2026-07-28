@@ -1,11 +1,11 @@
 /* Dostivox homepage styles */
-.dv-page{margin:0;font-family:'Segoe UI',Arial,sans-serif;color:#16213e;background:#fff;}
+.dv-page{margin:0;font-family:'Segoe UI',Arial,sans-serif;color:#0d1424;background:#fff;}
 .dv-page a{text-decoration:none;color:inherit;}
 .dv-page button{font-family:inherit;cursor:pointer;}
 .dv-page img{max-width:100%;display:block;}
 
 /* HEADER */
-.dv-top{background:#0b1e4d;color:#fff;padding:14px 20px;}
+.dv-top{background:#050c24;color:#fff;padding:14px 20px;}
 .dv-top-inner{max-width:1300px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;}
 .dv-logo{display:flex;align-items:center;gap:6px;font-size:26px;font-weight:800;}
 .dv-menu-btn{background:none;border:none;color:#fff;font-size:22px;display:flex;align-items:center;}
@@ -25,15 +25,15 @@
 .dv-tag{background:#facc15;color:#78350f;font-weight:700;font-size:10px;padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:4px;}
 .dv-banner-text h1{font-size:24px;margin:2px 0;line-height:1.1;}
 .dv-hl{color:#f5820c;}
-.dv-off{font-size:18px;font-weight:800;color:#0b1e4d;}
+.dv-off{font-size:18px;font-weight:800;color:#050c24;}
 .dv-banner-text p{color:#6b7280;margin:4px 0 10px;font-size:13px;}
-.dv-shop-now{background:#0b1e4d;color:#fff;border:none;padding:8px 18px;border-radius:6px;font-weight:600;font-size:13px;}
-.dv-shop-now:hover{background:#081536;}
+.dv-shop-now{background:#050c24;color:#fff;border:none;padding:8px 18px;border-radius:6px;font-weight:600;font-size:13px;}
+.dv-shop-now:hover{background:#03081a;}
 .dv-banner-img{max-width:38%;max-height:90%;position:relative;z-index:1;font-size:38px;text-align:center;}
 .dv-limited{position:absolute;top:20px;right:24px;background:#fff;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:700;color:#2563eb;box-shadow:0 2px 8px rgba(0,0,0,.1);transform:rotate(-4deg);}
 .dv-dots{display:flex;gap:6px;justify-content:center;margin-top:10px;}
 .dv-dot{width:8px;height:8px;border-radius:50%;background:#cbd5e1;border:none;padding:0;}
-.dv-dot.active{background:#0b1e4d;width:22px;border-radius:4px;}
+.dv-dot.active{background:#050c24;width:22px;border-radius:4px;}
 
 /* PERKS - single row, scroll on small screens */
 .dv-perks{max-width:1300px;margin:0 auto 30px;padding:16px 20px;display:flex;flex-wrap:nowrap;overflow-x:auto;gap:10px;border:1px solid #eee;border-radius:10px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
@@ -99,31 +99,31 @@
 .dv-test-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
 .dv-test-card{border:1px solid #eee;border-radius:10px;padding:18px;}
 .dv-test-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
-.dv-avatar{width:42px;height:42px;border-radius:50%;background:#0b1e4d;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;}
+.dv-avatar{width:42px;height:42px;border-radius:50%;background:#050c24;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;}
 .dv-test-card h5{margin:0;font-size:14px;}
 .dv-test-card p{font-size:13px;color:#6b7280;margin:8px 0 0;}
 
 /* NEWSLETTER + FOOTER */
-.dv-newsletter{background:#0b1e4d;color:#fff;padding:22px 20px;}
+.dv-newsletter{background:#050c24;color:#fff;padding:22px 20px;}
 .dv-newsletter-inner{max-width:1300px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;}
 .dv-left{display:flex;align-items:center;gap:12px;}
 .dv-newsletter form{display:flex;gap:10px;flex:1;max-width:520px;min-width:260px;}
 .dv-newsletter input{flex:1;padding:11px 14px;border-radius:6px;border:none;}
 .dv-newsletter form button{background:#f5820c;color:#fff;border:none;padding:11px 22px;border-radius:6px;font-weight:600;}
-.dv-footer{background:#0e1c3c;color:#cbd5e1;padding:36px 20px 20px;}
+.dv-footer{background:#060e22;color:#cbd5e1;padding:36px 20px 20px;}
 .dv-footer-inner{max-width:1300px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:24px;}
 .dv-footer-inner h5{color:#fff;font-size:14px;margin:0 0 12px;letter-spacing:.5px;}
 .dv-footer-inner a{display:block;color:#94a3b8;font-size:13px;margin-bottom:8px;}
 .dv-socials{display:flex;gap:10px;margin:8px 0 12px;}
-.dv-socials span{width:32px;height:32px;border-radius:50%;background:#1e2a4a;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.dv-socials span{width:32px;height:32px;border-radius:50%;background:#101a30;display:flex;align-items:center;justify-content:center;font-size:14px;}
 .dv-pay{display:flex;gap:8px;flex-wrap:wrap;}
-.dv-pay span{background:#1e2a4a;padding:4px 8px;border-radius:4px;font-size:11px;}
-.dv-copyright{text-align:center;border-top:1px solid #1e2a4a;margin-top:24px;padding-top:16px;font-size:12px;color:#64748b;}
+.dv-pay span{background:#101a30;padding:4px 8px;border-radius:4px;font-size:11px;}
+.dv-copyright{text-align:center;border-top:1px solid #101a30;margin-top:24px;padding-top:16px;font-size:12px;color:#64748b;}
 
 .dv-whatsapp-fab{position:fixed;bottom:24px;right:24px;background:#25D366;width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px;box-shadow:0 4px 14px rgba(0,0,0,.25);z-index:50;border:none;}
 
 /* toast */
-.dv-toast{position:fixed;bottom:90px;right:24px;background:#16213e;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transform:translateY(10px);transition:.25s;z-index:60;}
+.dv-toast{position:fixed;bottom:90px;right:24px;background:#0d1424;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transform:translateY(10px);transition:.25s;z-index:60;}
 .dv-toast.show{opacity:1;transform:translateY(0);}
 
 /* modal */
@@ -131,7 +131,7 @@
 .dv-modal{background:#fff;border-radius:12px;padding:26px;width:100%;max-width:380px;position:relative;}
 .dv-modal h3{margin-top:0;}
 .dv-modal input{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:6px;margin-bottom:12px;font-size:14px;}
-.dv-primary{width:100%;background:#0b1e4d;color:#fff;border:none;padding:11px;border-radius:6px;font-weight:600;}
+.dv-primary{width:100%;background:#050c24;color:#fff;border:none;padding:11px;border-radius:6px;font-weight:600;}
 .dv-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:18px;color:#6b7280;}
 .dv-cart-list{max-height:280px;overflow:auto;margin-bottom:12px;}
 .dv-cart-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f2f6;font-size:13px;}
