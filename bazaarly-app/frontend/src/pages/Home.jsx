@@ -145,7 +145,7 @@ export default function Homepage() {
       {categories.length > 0 && (
         <div className="dv-section">
           <div className="dv-sec-head"><h2>Shop by Category</h2></div>
-          <div className="dv-cat-row">
+          <div className="dv-cat-grid">
             {categories.map((c) => (
               <div className="dv-cat-item" key={c.id} onClick={() => goToCategory(c)}>
                 <div className="dv-cat-img">
