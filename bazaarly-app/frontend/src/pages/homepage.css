@@ -52,7 +52,7 @@
 /* CATEGORIES - single row */
 .dv-cat-grid{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:16px;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px;}
 .dv-cat-grid::-webkit-scrollbar{display:none;}
-.dv-cat-item{text-align:center;flex:0 0 auto;width:110px;}
+.dv-cat-item{text-align:center;flex:0 0 auto;width:84px;}
 .dv-cat-img{background:#f1f2f6;border-radius:50%;width:84px;height:84px;overflow:hidden;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.08);}
 .dv-cat-img img{width:100%;height:100%;object-fit:cover;}
 .dv-cat-item span{font-size:13px;font-weight:600;}
