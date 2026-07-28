@@ -1,93 +1,238 @@
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Api } from '../api/client';
-import ProductCard from '../components/ProductCard';
-import HeroCarousel from '../components/HeroCarousel';
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { Api } from "../api/client";
+import "./homepage.css";
 
-// Fallback text used only until the content loads (or if a key was never set).
-const DEFAULT_CONTENT = {
-  home_hero_badge: 'New Season Arrivals',
-  home_hero_title: '<p>Shop Premium.</p><p>Live Beautifully.</p>',
-  home_hero_subtitle: 'Curated electronics, fashion, home essentials and more — with fast delivery and easy returns.',
-  home_hero_bg_from: '#2c31ab',
-  home_hero_bg_to: '#4a5cf0',
-  home_hero_image: 'https://picsum.photos/seed/hero-main/700/560',
-  home_promo_title: 'Season Sale — Up to 50% Off',
-  home_promo_text: 'Use code WELCOME10 at checkout for an extra 10% off.',
-  home_trending_title: 'Trending Now',
+/**
+ * Dostivox Homepage — connected to the real backend/admin panel.
+ * Drop this in place of the old Homepage.jsx (same folder, same
+ * import path assumptions: pages/Home.jsx importing ../api/client).
+ *
+ * IMPORTANT: this file does NOT render its own header/nav/search bar
+ * or footer — those already come from Layout.jsx (<Navbar /> and
+ * <Footer />). Rendering them again here was what caused the
+ * duplicate top bar.
+ */
+
+const money = (n) => "₹" + Number(n || 0).toLocaleString("en-IN");
+const offPercent = (price, mrp) => {
+  if (!mrp || mrp <= price) return null;
+  return Math.round(((mrp - price) / mrp) * 100) + "% OFF";
 };
 
-export default function Home() {
+export default function Homepage() {
+  const navigate = useNavigate();
+  const [slides, setSlides] = useState([]);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [content, setContent] = useState(DEFAULT_CONTENT);
+  const [activeDot, setActiveDot] = useState(0);
+  const [toast, setToast] = useState("");
+  const [addedId, setAddedId] = useState(null);
+  const toastTimer = useRef(null);
 
   useEffect(() => {
-    (async () => {
-      const [{ categories }, { products }, siteContent] = await Promise.all([
-        Api.categories(),
-        Api.products({ sort: 'popular', limit: 8 }),
-        Api.siteContent(),
-      ]);
-      setCategories(categories);
-      setProducts(products);
-      const cleaned = Object.fromEntries(
-        Object.entries(siteContent.content || {}).filter(([, v]) => v !== '' && v != null)
-      );
-      setContent({ ...DEFAULT_CONTENT, ...cleaned });
+    let mounted = true;
+    Promise.all([
+      Api.heroSlides().catch(() => ({ slides: [] })),
+      Api.categories().catch(() => ({ categories: [] })),
+      Api.products({ limit: 16, sort: "popular" }).catch(() => ({ products: [] })),
+    ]).then(([slideRes, catRes, prodRes]) => {
+      if (!mounted) return;
+      setSlides(slideRes.slides || []);
+      setCategories((catRes.categories || []).filter((c) => c.is_active !== false && c.is_active !== 0));
+      setProducts(prodRes.products || []);
       setLoading(false);
-    })();
+    });
+    return () => { mounted = false; };
   }, []);
 
+  // hero autoplay
+  useEffect(() => {
+    if (!slides.length) return;
+    const t = setInterval(() => setActiveDot((d) => (d + 1) % slides.length), 4500);
+    return () => clearInterval(t);
+  }, [slides.length]);
+
+  const showToast = (msg) => {
+    setToast(msg);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(""), 2200);
+  };
+
+  const addToCart = async (product) => {
+    try {
+      await Api.addToCart(product.id, 1);
+      showToast(product.title + " added to cart");
+      setAddedId(product.id);
+      setTimeout(() => setAddedId(null), 1200);
+    } catch (e) {
+      showToast(e.message || "Please sign in to add to cart");
+    }
+  };
+
+  const addToWishlist = async (product) => {
+    try {
+      await Api.addWishlist(product.id);
+      showToast(product.title + " added to wishlist");
+    } catch (e) {
+      showToast(e.message || "Please sign in to use wishlist");
+    }
+  };
+
+  const goToCategory = (cat) => navigate(`/products?category=${cat.slug}`);
+  const goToProduct = (p) => navigate(`/products/${p.slug}`);
+
+  // "Today's Deals" — reuse the same product batch, just show the
+  // ones with the biggest discount first. If you'd rather have deals
+  // be admin-controlled separately, that needs its own backend flag —
+  // let me know and I'll add it.
+  const deals = [...products]
+    .filter((p) => p.mrp && p.mrp > p.price)
+    .sort((a, b) => (b.mrp - b.price) / b.mrp - (a.mrp - a.price) / a.mrp)
+    .slice(0, 4);
+
+  const trending = products.slice(0, 8);
+
+  if (loading) {
+    return <div className="dv-loading">Loading Dostivox…</div>;
+  }
+
   return (
-    <div>
-      <HeroCarousel />
-      {/* Categories */}
-      <section className="container-app py-14">
-        <div className="mb-8 flex items-center justify-between">
-          <h2 className="section-title">Shop by Category</h2>
-          <Link to="/categories" className="text-sm font-semibold text-brand-600 hover:underline">View all</Link>
-        </div>
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(84px,1fr))] gap-x-3 gap-y-5 sm:grid-cols-[repeat(auto-fill,minmax(96px,1fr))]">
-          {categories.map((c) => (
-            <Link key={c.id} to={`/categories/${c.slug}`} className="group flex flex-col items-center text-center">
-              <div className="aspect-square w-full max-w-[88px] overflow-hidden rounded-full border border-slate-100 bg-slate-50 sm:max-w-[104px]">
-                <img src={c.image} alt={c.name} className="h-full w-full object-cover transition group-hover:scale-110" loading="lazy" />
+    <div className="dv-page">
+      {/* HERO SLIDESHOW — admin-editable via /admin/banners (hero slides) */}
+      {slides.length > 0 && (
+        <div className="dv-banner-wrap">
+          <div
+            className="dv-banner"
+            style={{
+              backgroundImage: slides[activeDot]?.image ? `url(${slides[activeDot].image})` : undefined,
+              backgroundSize: slides[activeDot]?.imageFit === "cover" ? "cover" : "contain",
+            }}
+          >
+            {slides[activeDot]?.mode !== "image_only" && (
+              <div className="dv-banner-text">
+                {slides[activeDot]?.eyebrow && <span className="dv-tag">{slides[activeDot].eyebrow}</span>}
+                <h1>{slides[activeDot]?.title}</h1>
+                {slides[activeDot]?.subtitle && <p>{slides[activeDot].subtitle}</p>}
+                {Array.isArray(slides[activeDot]?.specs) && slides[activeDot].specs.length > 0 && (
+                  <ul className="dv-specs">
+                    {slides[activeDot].specs.map((s, i) => <li key={i}>{s}</li>)}
+                  </ul>
+                )}
+                {slides[activeDot]?.ctaText && (
+                  <button
+                    className="dv-shop-now"
+                    onClick={() => slides[activeDot].ctaLink ? navigate(slides[activeDot].ctaLink) : document.getElementById("dv-trending")?.scrollIntoView({ behavior: "smooth" })}
+                  >
+                    {slides[activeDot].ctaText}
+                  </button>
+                )}
               </div>
-              <p className="mt-2 line-clamp-2 text-xs font-medium text-slate-700 sm:text-sm">{c.name}</p>
-            </Link>
+            )}
+          </div>
+          {slides.length > 1 && (
+            <div className="dv-dots">
+              {slides.map((_, i) => (
+                <span key={i} className={"dv-dot" + (i === activeDot ? " active" : "")} onClick={() => setActiveDot(i)} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SHOP BY CATEGORY — admin-editable via /admin/categories */}
+      {categories.length > 0 && (
+        <div className="dv-section">
+          <div className="dv-sec-head"><h2>Shop by Category</h2></div>
+          <div className="dv-cat-row">
+            {categories.map((c) => (
+              <div className="dv-cat-item" key={c.id} onClick={() => goToCategory(c)}>
+                <div className="dv-cat-img">
+                  {c.image ? <img src={c.image} alt={c.name} /> : "🛍"}
+                </div>
+                <span>{c.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TRENDING PRODUCTS — admin-editable via /admin/products */}
+      <div className="dv-section" id="dv-trending">
+        <div className="dv-sec-head">
+          <h2>Trending Products</h2>
+          <a className="dv-view-all" onClick={() => navigate("/products")}>View All ›</a>
+        </div>
+        <div className="dv-prod-grid">
+          {trending.map((p) => (
+            <div className="dv-card" key={p.id}>
+              <button className="dv-wish" onClick={() => addToWishlist(p)}>♡</button>
+              <div className="dv-img-box" onClick={() => goToProduct(p)}>
+                {p.thumbnail ? <img src={p.thumbnail} alt={p.title} /> : "📦"}
+              </div>
+              <h4 onClick={() => goToProduct(p)}>{p.title}</h4>
+              {p.rating != null && (
+                <div className="dv-stars">★ {p.rating} <span>({(p.rating_count || 0).toLocaleString("en-IN")})</span></div>
+              )}
+              <div className="dv-price">
+                <span className="now">{money(p.price)}</span>
+                {p.mrp > p.price && <span className="old">{money(p.mrp)}</span>}
+              </div>
+              {offPercent(p.price, p.mrp) && <div className="dv-off-tag">{offPercent(p.price, p.mrp)}</div>}
+              <button
+                className={"dv-add-cart" + (addedId === p.id ? " added" : "")}
+                onClick={() => addToCart(p)}
+              >
+                {addedId === p.id ? "✓ Added" : "🛒 Add to Cart"}
+              </button>
+            </div>
           ))}
+          {trending.length === 0 && <p style={{ color: "#6b7280", fontSize: 14 }}>No products yet — add some from the admin panel.</p>}
         </div>
-      </section>
+      </div>
 
-      {/* Promo banner */}
-      <section className="container-app pb-14">
-        <div className="relative overflow-hidden rounded-xl2 bg-gradient-to-r from-accent-500 to-accent-400 p-10 text-white">
-          <div className="max-w-lg">
-            <h3 className="font-display text-3xl font-semibold">{content.home_promo_title}</h3>
-            <p className="mt-2 text-white/90">{content.home_promo_text}</p>
-            <Link to="/products" className="btn mt-6 bg-white text-accent-600 px-6 py-2.5 hover:bg-white/90">Explore Deals</Link>
+      {/* TODAY'S DEALS */}
+      {deals.length > 0 && (
+        <div className="dv-section">
+          <div className="dv-sec-head">
+            <h2>Today's Deals</h2>
+            <a className="dv-view-all" onClick={() => navigate("/products?sort=price_asc")}>View All ›</a>
+          </div>
+          <div className="dv-deal-grid">
+            {deals.map((d, i) => (
+              <div className={"dv-deal-card deal" + ((i % 4) + 1)} key={d.id}>
+                <div className="dv-img-box" onClick={() => goToProduct(d)}>
+                  {d.thumbnail ? <img src={d.thumbnail} alt={d.title} /> : "📦"}
+                </div>
+                <div className="dv-sub">{d.brand}</div>
+                <h4 onClick={() => goToProduct(d)}>{d.title}</h4>
+                <div className="dv-price">
+                  <span className="now">{money(d.price)}</span>
+                  <span className="old">{money(d.mrp)}</span>
+                </div>
+                <div className="dv-off-tag">{offPercent(d.price, d.mrp)}</div>
+                <button className={"dv-deal-btn deal-btn" + ((i % 4) + 1)} onClick={() => addToCart(d)}>
+                  🛒 Add to Cart
+                </button>
+              </div>
+            ))}
           </div>
         </div>
-      </section>
+      )}
 
-      {/* Featured products */}
-      <section className="container-app pb-20">
-        <div className="mb-8 flex items-center justify-between">
-          <h2 className="section-title">{content.home_trending_title}</h2>
-          <Link to="/products" className="text-sm font-semibold text-brand-600 hover:underline">View all</Link>
+      {/* WHY CHOOSE — static, not admin-driven (nothing in backend tracks this) */}
+      <div className="dv-section">
+        <div className="dv-sec-head"><h2>Why Choose Dostivox?</h2></div>
+        <div className="dv-why-grid">
+          <div className="dv-why-card"><div className="dv-wi" style={{ background: "#fee2e2", color: "#ef4444" }}>%</div><h4>Best Prices</h4><p>Guaranteed</p></div>
+          <div className="dv-why-card"><div className="dv-wi" style={{ background: "#dcfce7", color: "#16a34a" }}>✓</div><h4>Genuine Products</h4><p>100% Original</p></div>
+          <div className="dv-why-card"><div className="dv-wi" style={{ background: "#dcfce7", color: "#16a34a" }}>🚚</div><h4>Fast Delivery</h4><p>Across India</p></div>
+          <div className="dv-why-card"><div className="dv-wi" style={{ background: "#dbeafe", color: "#2563eb" }}>🎧</div><h4>24/7 Customer Support</h4><p>We're here to help</p></div>
         </div>
-        {loading ? (
-          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, i) => <div key={i} className="aspect-[3/4] animate-pulse rounded-xl2 bg-slate-100" />)}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
-            {products.map((p) => <ProductCard key={p.id} product={p} />)}
-          </div>
-        )}
-      </section>
+      </div>
+
+      {toast && <div className="dv-toast show">{toast}</div>}
     </div>
   );
 }
