@@ -112,10 +112,11 @@ const addToWishlist = async (product) => {
           <div
             className="dv-banner"
             style={{
-              backgroundImage: slides[activeDot]?.image ? `url(${slides[activeDot].image})` : undefined,
-              backgroundSize: slides[activeDot]?.imageFit === "cover" ? "cover" : "contain",
-            }}
-          >
+  backgroundImage: `url(${slides[activeDot].image})`,
+  backgroundSize: slides[activeDot]?.imageFit === "cover" ? "cover" : "contain",
+  backgroundPosition: "center",
+  backgroundRepeat: "no-repeat",
+}}
             {slides[activeDot]?.mode !== "image_only" && (
               <div className="dv-banner-text">
                 {slides[activeDot]?.eyebrow && <span className="dv-tag">{slides[activeDot].eyebrow}</span>}
