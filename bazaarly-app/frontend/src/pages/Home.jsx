@@ -60,25 +60,31 @@ export default function Homepage() {
     toastTimer.current = setTimeout(() => setToast(""), 2200);
   };
 
-  const addToCart = async (product) => {
-    try {
-      await Api.addToCart(product.id, 1);
-      showToast(product.title + " added to cart");
-      setAddedId(product.id);
-      setTimeout(() => setAddedId(null), 1200);
-    } catch (e) {
-      showToast(e.message || "Please sign in to add to cart");
+const addToCart = async (product) => {
+  try {
+    await Api.addToCart(product.id, 1);
+    showToast(product.title + " added to cart");
+    setAddedId(product.id);
+    setTimeout(() => setAddedId(null), 1200);
+  } catch (e) {
+    showToast("Please sign in to add to cart");
+    if (!localStorage.getItem("token")) {
+      setTimeout(() => navigate("/login"), 900);
     }
-  };
+  }
+};
 
-  const addToWishlist = async (product) => {
-    try {
-      await Api.addWishlist(product.id);
-      showToast(product.title + " added to wishlist");
-    } catch (e) {
-      showToast(e.message || "Please sign in to use wishlist");
+const addToWishlist = async (product) => {
+  try {
+    await Api.addWishlist(product.id);
+    showToast(product.title + " added to wishlist");
+  } catch (e) {
+    showToast("Please sign in to use wishlist");
+    if (!localStorage.getItem("token")) {
+      setTimeout(() => navigate("/login"), 900);
     }
-  };
+  }
+};
 
   const goToCategory = (cat) => navigate(`/products?category=${cat.slug}`);
   const goToProduct = (p) => navigate(`/products/${p.slug}`);
