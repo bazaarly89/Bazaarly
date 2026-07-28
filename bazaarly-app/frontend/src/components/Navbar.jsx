@@ -12,6 +12,7 @@ export default function Navbar() {
 
   const submitSearch = (e) => {
     e.preventDefault();
+    if (!query.trim()) return;
     navigate(`/search?q=${encodeURIComponent(query)}`);
     setMenuOpen(false);
   };
@@ -45,26 +46,26 @@ export default function Navbar() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search for products, brands..."
-              className="w-full rounded-full border border-slate-200 bg-slate-50 py-2.5 pl-4 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+              className="w-full rounded-full border border-slate-200 bg-slate-50 py-2.5 pl-4 pr-10 text-sm focus:outline-none focus:border-brand-400"
             />
-            <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 grid h-8 w-8 place-items-center rounded-full bg-brand-500 text-white">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
+            <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 grid h-8 w-8 place-items-center" aria-label="Search">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
             </button>
           </div>
         </form>
 
         <div className="ml-auto md:ml-4 flex items-center gap-4">
           <Link to="/wishlist" className="hidden sm:inline-flex text-slate-600 hover:text-accent-500" aria-label="Wishlist">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 21s-7.5-4.6-10-9.1C.6 8.4 2 4.5 5.6 3.7 8 3.2 10 4.3 12 6.8c2-2.5 4-3.6 6.4-3.1 3.6.8 5 4.7 3.6 8.2C19.5 16.4 12 21 12 21z" /></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 21s-7-4.35-9.5-8.5C1 9 2.5 6 5.5 6c2 0 3.3 1.2 4 2.2C10.2 7.2 11.5 6 13.5 6 16.5 6 18 9 21 12.5 18.5 16.65 12 21 12 21z" /></svg>
           </Link>
           <Link to="/cart" className="relative text-slate-600 hover:text-brand-600" aria-label="Cart">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6h15l-1.5 9h-12z" /><path d="M6 6 5 2H2" /><circle cx="9" cy="20" r="1.5" /><circle cx="18" cy="20" r="1.5" /></svg>
-            {count > 0 && <span className="absolute -top-2 -right-2 grid h-5 w-5 place-items-center rounded-full bg-accent-500 text-[10px] font-bold text-white">{count}</span>}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6h15l-1.5 9h-12z" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" /></svg>
+            {count > 0 && <span className="absolute -top-2 -right-2 grid h-5 w-5 place-items-center rounded-full bg-accent-500 text-[10px] text-white">{count}</span>}
           </Link>
           {user ? (
             <div className="relative group">
-              <button className="grid h-9 w-9 place-items-center rounded-full bg-brand-100 font-semibold text-brand-700">{user.name?.[0]?.toUpperCase()}</button>
-              <div className="absolute right-0 mt-2 hidden w-48 rounded-xl border border-slate-100 bg-white py-2 shadow-cardHover group-hover:block animate-scaleIn">
+              <button className="grid h-9 w-9 place-items-center rounded-full bg-brand-100 font-semibold text-brand-700">{user.name?.[0] || 'U'}</button>
+              <div className="absolute right-0 mt-2 hidden w-48 rounded-xl border border-slate-100 bg-white py-2 shadow-lg group-hover:block">
                 <Link to="/account" className="block px-4 py-2 text-sm hover:bg-slate-50">My Account</Link>
                 <Link to="/orders" className="block px-4 py-2 text-sm hover:bg-slate-50">My Orders</Link>
                 <Link to="/wishlist" className="block px-4 py-2 text-sm hover:bg-slate-50">Wishlist</Link>
@@ -77,11 +78,24 @@ export default function Navbar() {
         </div>
       </div>
 
+      {/* Always-visible search bar on mobile — sits below the main row,
+          not hidden inside the hamburger menu */}
+      <form onSubmit={submitSearch} className="md:hidden border-t border-slate-100 px-4 py-2.5">
+        <div className="relative w-full">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search for products, brands..."
+            className="w-full rounded-full border border-slate-200 bg-slate-50 py-2.5 pl-4 pr-10 text-sm focus:outline-none focus:border-brand-400"
+          />
+          <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 grid h-8 w-8 place-items-center" aria-label="Search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+          </button>
+        </div>
+      </form>
+
       {menuOpen && (
         <div className="lg:hidden border-t border-slate-100 px-4 py-3 space-y-2">
-          <form onSubmit={submitSearch} className="mb-2">
-            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search products..." className="input" />
-          </form>
           {navLinks.map((l) => (
             <Link key={l.to} to={l.to} onClick={() => setMenuOpen(false)} className="block py-1.5 text-sm font-medium text-slate-700">{l.label}</Link>
           ))}
