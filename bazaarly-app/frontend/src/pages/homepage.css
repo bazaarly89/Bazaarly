@@ -18,19 +18,38 @@
 .dv-search-bar button{background:#f5820c;color:#fff;border:none;padding:0 26px;font-weight:600;font-size:15px;}
 .dv-search-bar button:hover{background:#e06d00;}
 
-/* BANNER */
+/* BANNER
+   FIX: the old height:22vh + max-height:220px clipped the subtitle/specs/button
+   whenever a slide had more text than that fixed box could fit (that's the
+   "Best Quality • Best Prices • 100% Trust" line getting cut off in the
+   screenshot). Banner now grows with its content instead of clipping it. */
 .dv-banner-wrap{max-width:1300px;margin:20px auto;padding:0 20px;}
-.dv-banner{position:relative;background:linear-gradient(135deg,#dbeafe,#eff6ff);border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:space-between;height:22vh;min-height:150px;max-height:220px;padding:16px 24px;}
-.dv-banner-text{max-width:420px;z-index:2;}
+.dv-banner{
+  position:relative;
+  background-color:#eff6ff; /* fallback while bg image loads */
+  border-radius:12px;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  min-height:220px;
+  padding:28px 32px;
+}
+.dv-banner-text{
+  max-width:460px;
+  z-index:2;
+  background:rgba(255,255,255,.82);
+  padding:14px 18px;
+  border-radius:10px;
+}
 .dv-tag{background:#facc15;color:#78350f;font-weight:700;font-size:10px;padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:4px;}
-.dv-banner-text h1{font-size:24px;margin:2px 0;line-height:1.1;}
+.dv-banner-text h1{font-size:26px;margin:2px 0;line-height:1.15;}
 .dv-hl{color:#f5820c;}
 .dv-off{font-size:18px;font-weight:800;color:#050c24;}
-.dv-banner-text p{color:#6b7280;margin:4px 0 10px;font-size:13px;}
-.dv-shop-now{background:#050c24;color:#fff;border:none;padding:8px 18px;border-radius:6px;font-weight:600;font-size:13px;}
+.dv-banner-text p{color:#374151;margin:4px 0 10px;font-size:13px;}
+.dv-specs{margin:0 0 10px;padding-left:18px;font-size:13px;color:#374151;}
+.dv-shop-now{background:#050c24;color:#fff;border:none;padding:9px 20px;border-radius:6px;font-weight:600;font-size:13px;}
 .dv-shop-now:hover{background:#03081a;}
-.dv-banner-img{max-width:38%;max-height:90%;position:relative;z-index:1;font-size:38px;text-align:center;}
-.dv-limited{position:absolute;top:20px;right:24px;background:#fff;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:700;color:#2563eb;box-shadow:0 2px 8px rgba(0,0,0,.1);transform:rotate(-4deg);}
 .dv-dots{display:flex;gap:6px;justify-content:center;margin-top:10px;}
 .dv-dot{width:8px;height:8px;border-radius:50%;background:#cbd5e1;border:none;padding:0;}
 .dv-dot.active{background:#050c24;width:22px;border-radius:4px;}
@@ -52,7 +71,7 @@
 /* CATEGORIES - single row */
 .dv-cat-grid{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:16px;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px;}
 .dv-cat-grid::-webkit-scrollbar{display:none;}
-.dv-cat-item{text-align:center;flex:0 0 auto;width:84px;}
+.dv-cat-item{text-align:center;flex:0 0 auto;width:84px;cursor:pointer;}
 .dv-cat-img{background:#f1f2f6;border-radius:50%;width:84px;height:84px;overflow:hidden;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.08);}
 .dv-cat-img img{width:100%;height:100%;object-fit:cover;}
 .dv-cat-item span{font-size:13px;font-weight:600;}
@@ -62,9 +81,11 @@
 .dv-prod-grid::-webkit-scrollbar{display:none;}
 .dv-card{border:1px solid #eee;border-radius:10px;padding:14px;position:relative;transition:box-shadow .2s;background:#fff;flex:0 0 auto;width:170px;}
 .dv-card:hover{box-shadow:0 6px 18px rgba(0,0,0,.08);}
+.dv-card h4{cursor:pointer;}
 .dv-wish{position:absolute;top:10px;right:10px;background:#fff;border:1px solid #eee;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:15px;color:#94a3b8;}
 .dv-wish.active{color:#ef4444;border-color:#ef4444;}
-.dv-img-box{background:#f8fafc;border-radius:8px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;font-size:44px;margin-bottom:10px;}
+.dv-img-box{background:#f8fafc;border-radius:8px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;font-size:44px;margin-bottom:10px;cursor:pointer;overflow:hidden;}
+.dv-img-box img{width:100%;height:100%;object-fit:cover;}
 .dv-card h4{font-size:14px;margin:0 0 4px;min-height:36px;}
 .dv-stars{color:#f59e0b;font-size:13px;}
 .dv-stars span{color:#6b7280;font-size:12px;}
@@ -82,7 +103,7 @@
 .dv-deal-grid::-webkit-scrollbar{display:none;}
 .dv-deal-card{border-radius:12px;padding:20px;position:relative;flex:0 0 auto;width:190px;}
 .dv-deal-card .dv-img-box{background:rgba(255,255,255,.5);border-radius:8px;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;font-size:40px;margin-bottom:12px;}
-.dv-deal-card h4{margin:0 0 2px;font-size:14px;}
+.dv-deal-card h4{margin:0 0 2px;font-size:14px;cursor:pointer;}
 .dv-sub{font-size:12px;color:#6b7280;margin-bottom:4px;}
 .deal1{background:#fde3c8;} .deal2{background:#fbdcdc;} .deal3{background:#d8f0dc;} .deal4{background:#e1dcf5;}
 .deal-btn1{background:#f5820c;} .deal-btn2{background:#e64545;} .deal-btn3{background:#16a34a;} .deal-btn4{background:#7c3aed;}
@@ -147,12 +168,12 @@
 @media (max-width:640px){
   .dv-icon-btn small{display:none;}
   .dv-icons{gap:14px;}
-  .dv-banner{padding:12px 16px;}
+  .dv-banner{padding:18px 16px;min-height:180px;}
+  .dv-banner-text{max-width:100%;}
   .dv-banner-text h1{font-size:19px;}
   .dv-off{font-size:14px;}
   .dv-banner-text p{font-size:11px;margin-bottom:6px;}
   .dv-shop-now{padding:6px 14px;font-size:12px;}
-  .dv-limited{display:none;}
   .dv-footer-inner{grid-template-columns:repeat(1,1fr);}
   .dv-newsletter form{max-width:100%;}
   .dv-sec-head h2{font-size:18px;}
