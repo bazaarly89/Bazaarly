@@ -239,7 +239,10 @@ const addToWishlist = async (product) => {
       </div>
 
 {toast && (
-  <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#111827", color: "#fff", padding: "10px 20px", borderRadius: 9999, fontSize: 14, zIndex: 9999, boxShadow: "0 4px 12px rgba(0,0,0,.25)" }}>
-    {toast}
-  </div>
-)}
+        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#111827", color: "#fff", padding: "10px 20px", borderRadius: 9999 }}>
+          {toast}
+        </div>
+      )}
+    </div>
+  );
+}
