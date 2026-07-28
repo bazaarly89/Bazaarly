@@ -3,7 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import Layout, { RequireAuth, RequireAdmin } from './components/Layout';
 
 // Public / customer pages
-import Home from '../components/Homepage';
+import Home from './components/Homepage';
 import Categories from './pages/Categories';
 import ProductListing from './pages/ProductListing';
 import ProductDetails from './pages/ProductDetails';
