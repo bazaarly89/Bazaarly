@@ -109,14 +109,17 @@ const addToWishlist = async (product) => {
       {/* HERO SLIDESHOW — admin-editable via /admin/banners (hero slides) */}
       {slides.length > 0 && (
         <div className="dv-banner-wrap">
-          <div
-            className="dv-banner"
-            style={{
-  backgroundImage: `url(${slides[activeDot].image})`,
-  backgroundSize: slides[activeDot]?.imageFit === "cover" ? "cover" : "contain",
-  backgroundPosition: "center",
-  backgroundRepeat: "no-repeat",
-}}
+          <div className="dv-banner-wrap">
+  <div
+    className="dv-banner"
+    style={{
+      backgroundImage: `url(${slides[activeDot].image})`,
+      backgroundSize: slides[activeDot]?.imageFit === "cover" ? "cover" : "contain",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+    }}
+  >
+    {slides[activeDot]?.mode !== "image_only" && (
             <div
   className="dv-banner"
   style={{
