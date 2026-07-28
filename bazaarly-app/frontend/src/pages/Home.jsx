@@ -106,30 +106,19 @@ const addToWishlist = async (product) => {
 
   return (
     <div className="dv-page">
-      {/* HERO SLIDESHOW — admin-editable via /admin/banners (hero slides) */}
+      {/* HERO SLIDESHOW – admin-editable via /admin/banners (hero slides) */}
       {slides.length > 0 && (
         <div className="dv-banner-wrap">
-          <div className="dv-banner-wrap">
-  <div
-    className="dv-banner"
-    style={{
-      backgroundImage: `url(${slides[activeDot].image})`,
-      backgroundSize: slides[activeDot]?.imageFit === "cover" ? "cover" : "contain",
-      backgroundPosition: "center",
-      backgroundRepeat: "no-repeat",
-    }}
-  >
-    {slides[activeDot]?.mode !== "image_only" && (
-            <div
-  className="dv-banner"
-  style={{
-    backgroundImage: `url(${slides[activeDot].image})`,
-    backgroundSize: slides[activeDot]?.imageFit === "cover" ? "cover" : "contain",
-    backgroundPosition: "center",
-    backgroundRepeat: "no-repeat",
-  }}
->
-  {slides[activeDot]?.mode !== "image_only" && (
+          <div
+            className="dv-banner"
+            style={{
+              backgroundImage: `url(${slides[activeDot].image})`,
+              backgroundSize: slides[activeDot]?.imageFit === "cover" ? "cover" : "contain",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
+          >
+            {slides[activeDot]?.mode !== "image_only" && (
               <div className="dv-banner-text">
                 {slides[activeDot]?.eyebrow && <span className="dv-tag">{slides[activeDot].eyebrow}</span>}
                 <h1>{slides[activeDot]?.title}</h1>
@@ -159,7 +148,6 @@ const addToWishlist = async (product) => {
           )}
         </div>
       )}
-
       {/* SHOP BY CATEGORY — admin-editable via /admin/categories */}
       {categories.length > 0 && (
         <div className="dv-section">
