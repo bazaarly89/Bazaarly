@@ -1,39 +1,44 @@
 const express = require('express');
-const { v4: uuid } = require('uuid');
-const db = require('../db');
+const { Address } = require('../db');
 const { authRequired } = require('../middleware/auth');
 const router = express.Router();
 
-router.get('/', authRequired, (req, res) => {
-  const addresses = db.prepare('SELECT * FROM addresses WHERE user_id = ? ORDER BY is_default DESC').all(req.user.id);
-  res.json({ addresses });
+function format(a) {
+  const obj = a.toObject ? a.toObject() : a;
+  return { ...obj, id: obj._id, full_name: obj.fullName, is_default: obj.isDefault };
+}
+
+router.get('/', authRequired, async (req, res) => {
+  const addresses = await Address.find({ userId: req.user.id }).sort({ isDefault: -1 }).lean();
+  res.json({ addresses: addresses.map(format) });
 });
 
-router.post('/', authRequired, (req, res) => {
+router.post('/', authRequired, async (req, res) => {
   const { label, full_name, phone, line1, line2, city, state, pincode, country, is_default } = req.body;
-  const id = uuid();
-  if (is_default) db.prepare('UPDATE addresses SET is_default = 0 WHERE user_id = ?').run(req.user.id);
-  db.prepare(`INSERT INTO addresses (id,user_id,label,full_name,phone,line1,line2,city,state,pincode,country,is_default)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
-    .run(id, req.user.id, label, full_name, phone, line1, line2 || '', city, state, pincode, country || 'India', is_default ? 1 : 0);
-  const addresses = db.prepare('SELECT * FROM addresses WHERE user_id = ? ORDER BY is_default DESC').all(req.user.id);
-  res.status(201).json({ addresses });
+  if (is_default) await Address.updateMany({ userId: req.user.id }, { isDefault: false });
+  await Address.create({
+    userId: req.user.id, label, fullName: full_name, phone, line1, line2: line2 || '',
+    city, state, pincode, country: country || 'India', isDefault: !!is_default,
+  });
+  const addresses = await Address.find({ userId: req.user.id }).sort({ isDefault: -1 }).lean();
+  res.status(201).json({ addresses: addresses.map(format) });
 });
 
-router.put('/:id', authRequired, (req, res) => {
+router.put('/:id', authRequired, async (req, res) => {
   const { label, full_name, phone, line1, line2, city, state, pincode, country, is_default } = req.body;
-  if (is_default) db.prepare('UPDATE addresses SET is_default = 0 WHERE user_id = ?').run(req.user.id);
-  db.prepare(`UPDATE addresses SET label=?,full_name=?,phone=?,line1=?,line2=?,city=?,state=?,pincode=?,country=?,is_default=?
-    WHERE id = ? AND user_id = ?`)
-    .run(label, full_name, phone, line1, line2 || '', city, state, pincode, country || 'India', is_default ? 1 : 0, req.params.id, req.user.id);
-  const addresses = db.prepare('SELECT * FROM addresses WHERE user_id = ? ORDER BY is_default DESC').all(req.user.id);
-  res.json({ addresses });
+  if (is_default) await Address.updateMany({ userId: req.user.id }, { isDefault: false });
+  await Address.updateOne(
+    { _id: req.params.id, userId: req.user.id },
+    { label, fullName: full_name, phone, line1, line2: line2 || '', city, state, pincode, country: country || 'India', isDefault: !!is_default }
+  );
+  const addresses = await Address.find({ userId: req.user.id }).sort({ isDefault: -1 }).lean();
+  res.json({ addresses: addresses.map(format) });
 });
 
-router.delete('/:id', authRequired, (req, res) => {
-  db.prepare('DELETE FROM addresses WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
-  const addresses = db.prepare('SELECT * FROM addresses WHERE user_id = ? ORDER BY is_default DESC').all(req.user.id);
-  res.json({ addresses });
+router.delete('/:id', authRequired, async (req, res) => {
+  await Address.deleteOne({ _id: req.params.id, userId: req.user.id });
+  const addresses = await Address.find({ userId: req.user.id }).sort({ isDefault: -1 }).lean();
+  res.json({ addresses: addresses.map(format) });
 });
 
 module.exports = router;
