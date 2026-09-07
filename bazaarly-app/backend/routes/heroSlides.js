@@ -1,24 +1,23 @@
 // backend/routes/heroSlides.js
 // Public, read-only endpoint — the homepage HeroCarousel calls this to get
-// the current slides. No login required. `specs` is stored as a JSON
-// string in the database and gets parsed back into an array here.
+// the current slides. No login required.
 const express = require('express');
-const db = require('../db');
+const { HeroSlide } = require('../db');
 const router = express.Router();
 
-router.get('/', (req, res) => {
-  const rows = db.prepare('SELECT * FROM hero_slides WHERE is_active = 1 ORDER BY position').all();
+router.get('/', async (req, res) => {
+  const rows = await HeroSlide.find({ isActive: true }).sort({ position: 1 }).lean();
   const slides = rows.map((r) => ({
-    id: r.id,
+    id: r._id,
     mode: r.mode,
     image: r.image,
     eyebrow: r.eyebrow,
     title: r.title,
     subtitle: r.subtitle,
-    specs: r.specs ? JSON.parse(r.specs) : [],
-    imageFit: r.image_fit || 'cover',
-    ctaText: r.cta_text,
-    ctaLink: r.cta_link,
+    specs: r.specs || [],
+    imageFit: r.imageFit || 'cover',
+    ctaText: r.ctaText,
+    ctaLink: r.ctaLink,
   }));
   res.json({ slides });
 });
