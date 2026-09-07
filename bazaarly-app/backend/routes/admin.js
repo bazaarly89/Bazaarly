@@ -1,298 +1,427 @@
 const express = require('express');
 const { v4: uuid } = require('uuid');
-const db = require('../db');
+const { Product, Category, Order, User, Coupon, Banner, Advertisement, Notification, Setting, HeroSlide } = require('../db');
 const { adminRequired } = require('../middleware/auth');
 const router = express.Router();
 
 router.use(adminRequired);
 
 // ---------------- DASHBOARD ----------------
-router.get('/dashboard', (req, res) => {
-  const totalSales = db.prepare(`SELECT COALESCE(SUM(total),0) s FROM orders WHERE payment_status = 'paid' OR payment_method = 'cod'`).get().s;
-  const totalOrders = db.prepare('SELECT COUNT(*) c FROM orders').get().c;
-  const totalCustomers = db.prepare(`SELECT COUNT(*) c FROM users WHERE role = 'customer'`).get().c;
-  const totalProducts = db.prepare('SELECT COUNT(*) c FROM products').get().c;
-  const pendingOrders = db.prepare(`SELECT COUNT(*) c FROM orders WHERE status IN ('placed','confirmed')`).get().c;
-  const lowStock = db.prepare('SELECT COUNT(*) c FROM products WHERE stock <= 5').get().c;
+router.get('/dashboard', async (req, res) => {
+  const paidOrDelivered = await Order.find({ $or: [{ paymentStatus: 'paid' }, { paymentMethod: 'cod' }] });
+  const totalSales = paidOrDelivered.reduce((sum, o) => sum + o.total, 0);
+  const totalOrders = await Order.countDocuments();
+  const totalCustomers = await User.countDocuments({ role: 'customer' });
+  const totalProducts = await Product.countDocuments();
+  const pendingOrders = await Order.countDocuments({ status: { $in: ['placed', 'confirmed'] } });
+  const lowStock = await Product.countDocuments({ stock: { $lte: 5 } });
 
-  const recentOrders = db.prepare(`
-    SELECT o.*, u.name as customer_name FROM orders o JOIN users u ON o.user_id = u.id
-    ORDER BY o.created_at DESC LIMIT 8`).all();
+  const recentOrdersRaw = await Order.find().sort({ createdAt: -1 }).limit(8).lean();
+  const recentOrders = await Promise.all(recentOrdersRaw.map(async (o) => {
+    const user = await User.findById(o.userId).lean();
+    return { ...o, id: o._id, customer_name: user?.name };
+  }));
 
-  const salesByDay = db.prepare(`
-    SELECT date(created_at) as day, SUM(total) as amount
-    FROM orders GROUP BY day ORDER BY day DESC LIMIT 14`).all().reverse();
+  const salesByDayAgg = await Order.aggregate([
+    { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, amount: { $sum: '$total' } } },
+    { $sort: { _id: -1 } },
+    { $limit: 14 },
+  ]);
+  const salesByDay = salesByDayAgg.reverse().map((r) => ({ day: r._id, amount: r.amount }));
 
-  const topProducts = db.prepare(`
-    SELECT p.title, SUM(oi.quantity) as sold FROM order_items oi
-    JOIN products p ON oi.product_id = p.id
-    GROUP BY oi.product_id ORDER BY sold DESC LIMIT 5`).all();
+  const topProductsAgg = await Order.aggregate([
+    { $unwind: '$items' },
+    { $group: { _id: '$items.productId', sold: { $sum: '$items.quantity' } } },
+    { $sort: { sold: -1 } },
+    { $limit: 5 },
+  ]);
+  const topProducts = await Promise.all(topProductsAgg.map(async (r) => {
+    const p = await Product.findById(r._id).lean();
+    return { title: p?.title, sold: r.sold };
+  }));
 
   res.json({ totalSales, totalOrders, totalCustomers, totalProducts, pendingOrders, lowStock, recentOrders, salesByDay, topProducts });
 });
 
 // ---------------- PRODUCTS ----------------
-router.get('/products', (req, res) => {
-  const products = db.prepare(`
-    SELECT p.*, c.name as category_name FROM products p LEFT JOIN categories c ON p.category_id = c.id
-    ORDER BY p.created_at DESC`).all();
-  const withImages = products.map((p) => ({
-    ...p,
-    images: db.prepare('SELECT url FROM product_images WHERE product_id = ? ORDER BY position').all(p.id).map((i) => i.url),
+router.get('/products', async (req, res) => {
+  const products = await Product.find().sort({ createdAt: -1 }).lean();
+  const withCategory = await Promise.all(products.map(async (p) => {
+    const cat = p.categoryId ? await Category.findById(p.categoryId).lean() : null;
+    return { ...p, id: p._id, category_name: cat?.name, images: (p.images || []).sort((a, b) => a.position - b.position).map((i) => i.url) };
   }));
-  res.json({ products: withImages });
+  res.json({ products: withCategory });
 });
 
-router.post('/products', (req, res) => {
-  const { title, description, categoryId, brand, price, mrp, stock, sku, images = [] } = req.body;
-  const id = uuid();
+router.post('/products', async (req, res) => {
+  const {
+    title, description, shortDescription, categoryId, brand, images = [], tags = [],
+    featured, trending, deal,
+    productType = 'own',
+    // own-product fields
+    price, mrp, stock, sku,
+    // affiliate-product fields
+    currentPrice, originalPrice, discountPercentage, merchant, affiliateUrl, ctaText,
+    pros = [], cons = [], editorScore, comparisonEnabled,
+  } = req.body;
+
   const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString(36);
-  db.prepare(`INSERT INTO products (id,title,slug,description,category_id,brand,price,mrp,stock,sku) VALUES (?,?,?,?,?,?,?,?,?,?)`)
-    .run(id, title, slug, description || '', categoryId, brand || '', price, mrp, stock || 0, sku || '');
-  const insertImg = db.prepare('INSERT INTO product_images (id,product_id,url,position) VALUES (?,?,?,?)');
-  images.forEach((url, i) => insertImg.run(uuid(), id, url, i));
-  res.status(201).json({ product: db.prepare('SELECT * FROM products WHERE id = ?').get(id) });
-});
 
-router.put('/products/:id', (req, res) => {
-  const { title, description, categoryId, brand, price, mrp, stock, sku, isActive, images } = req.body;
-  db.prepare(`UPDATE products SET title=COALESCE(?,title), description=COALESCE(?,description),
-    category_id=COALESCE(?,category_id), brand=COALESCE(?,brand), price=COALESCE(?,price), mrp=COALESCE(?,mrp),
-    stock=COALESCE(?,stock), sku=COALESCE(?,sku), is_active=COALESCE(?,is_active) WHERE id = ?`)
-    .run(title, description, categoryId, brand, price, mrp, stock, sku, isActive, req.params.id);
+  const productData = {
+    title, slug, description: description || '', shortDescription: shortDescription || '',
+    categoryId, brand: brand || '', productType,
+    images: images.map((url, i) => ({ url, position: i })),
+    tags, featured: !!featured, trending: !!trending, deal: !!deal,
+  };
 
-  if (Array.isArray(images)) {
-    db.prepare('DELETE FROM product_images WHERE product_id = ?').run(req.params.id);
-    const insertImg = db.prepare('INSERT INTO product_images (id,product_id,url,position) VALUES (?,?,?,?)');
-    images.forEach((url, i) => insertImg.run(uuid(), req.params.id, url, i));
+  if (productType === 'own') {
+    // Own products need price/mrp/stock — affiliate-only fields are left blank
+    productData.price = price;
+    productData.mrp = mrp;
+    productData.stock = stock || 0;
+    productData.sku = sku || '';
+  } else if (productType === 'affiliate') {
+    // Affiliate products never touch cart/stock — they only redirect out
+    if (!affiliateUrl) return res.status(400).json({ error: 'affiliateUrl is required for affiliate products' });
+    productData.currentPrice = currentPrice;
+    productData.originalPrice = originalPrice;
+    productData.discountPercentage = discountPercentage;
+    productData.merchant = merchant || '';
+    productData.affiliateUrl = affiliateUrl;
+    productData.ctaText = ctaText || 'Check Deal';
+    productData.pros = pros;
+    productData.cons = cons;
+    productData.editorScore = editorScore;
+    productData.comparisonEnabled = !!comparisonEnabled;
   }
-  res.json({ product: db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id) });
+
+  const product = await Product.create(productData);
+  res.status(201).json({ product: { ...product.toObject(), id: product._id } });
 });
 
-router.delete('/products/:id', (req, res) => {
-  db.prepare('DELETE FROM products WHERE id = ?').run(req.params.id);
+router.put('/products/:id', async (req, res) => {
+  const {
+    title, description, shortDescription, categoryId, brand, isActive, images, tags,
+    featured, trending, deal, productType,
+    price, mrp, stock, sku,
+    currentPrice, originalPrice, discountPercentage, merchant, affiliateUrl, ctaText,
+    pros, cons, editorScore, comparisonEnabled,
+  } = req.body;
+
+  const update = { updatedAt: new Date() };
+  if (title !== undefined) update.title = title;
+  if (description !== undefined) update.description = description;
+  if (shortDescription !== undefined) update.shortDescription = shortDescription;
+  if (categoryId !== undefined) update.categoryId = categoryId;
+  if (brand !== undefined) update.brand = brand;
+  if (isActive !== undefined) update.isActive = isActive;
+  if (Array.isArray(images)) update.images = images.map((url, i) => ({ url, position: i }));
+  if (Array.isArray(tags)) update.tags = tags;
+  if (featured !== undefined) update.featured = featured;
+  if (trending !== undefined) update.trending = trending;
+  if (deal !== undefined) update.deal = deal;
+  if (productType !== undefined) update.productType = productType;
+
+  // own-product fields
+  if (price !== undefined) update.price = price;
+  if (mrp !== undefined) update.mrp = mrp;
+  if (stock !== undefined) update.stock = stock;
+  if (sku !== undefined) update.sku = sku;
+
+  // affiliate-product fields
+  if (currentPrice !== undefined) update.currentPrice = currentPrice;
+  if (originalPrice !== undefined) update.originalPrice = originalPrice;
+  if (discountPercentage !== undefined) update.discountPercentage = discountPercentage;
+  if (merchant !== undefined) update.merchant = merchant;
+  if (affiliateUrl !== undefined) update.affiliateUrl = affiliateUrl;
+  if (ctaText !== undefined) update.ctaText = ctaText;
+  if (Array.isArray(pros)) update.pros = pros;
+  if (Array.isArray(cons)) update.cons = cons;
+  if (editorScore !== undefined) update.editorScore = editorScore;
+  if (comparisonEnabled !== undefined) update.comparisonEnabled = comparisonEnabled;
+
+  const product = await Product.findByIdAndUpdate(req.params.id, update, { new: true });
+  res.json({ product: { ...product.toObject(), id: product._id } });
+});
+
+router.delete('/products/:id', async (req, res) => {
+  await Product.findByIdAndDelete(req.params.id);
   res.json({ message: 'Product deleted' });
 });
 
 // ---------------- INVENTORY ----------------
-router.get('/inventory', (req, res) => {
-  const items = db.prepare('SELECT id, title, sku, stock, price FROM products ORDER BY stock ASC').all();
-  res.json({ items });
+router.get('/inventory', async (req, res) => {
+  const items = await Product.find().select('title sku stock price').sort({ stock: 1 }).lean();
+  res.json({ items: items.map((i) => ({ ...i, id: i._id })) });
 });
 
-router.put('/inventory/:id', (req, res) => {
+router.put('/inventory/:id', async (req, res) => {
   const { stock } = req.body;
-  db.prepare('UPDATE products SET stock = ? WHERE id = ?').run(stock, req.params.id);
+  await Product.findByIdAndUpdate(req.params.id, { stock });
   res.json({ message: 'Stock updated' });
 });
 
 // ---------------- CATEGORIES ----------------
-router.get('/categories', (req, res) => {
-  res.json({ categories: db.prepare('SELECT * FROM categories ORDER BY name').all() });
+router.get('/categories', async (req, res) => {
+  const categories = await Category.find().sort({ name: 1 }).lean();
+  res.json({ categories: categories.map((c) => ({ ...c, id: c._id })) });
 });
 
-router.post('/categories', (req, res) => {
+router.post('/categories', async (req, res) => {
   const { name, image, parentId, isActive } = req.body;
-  const id = uuid();
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-  db.prepare('INSERT INTO categories (id,name,slug,image,parent_id,is_active) VALUES (?,?,?,?,?,?)')
-    .run(id, name, slug, image || '', parentId || null, isActive === false ? 0 : 1);
-  res.status(201).json({ category: db.prepare('SELECT * FROM categories WHERE id = ?').get(id) });
+  const category = await Category.create({ name, slug, image: image || '', parentId: parentId || null, isActive: isActive === false ? false : true });
+  res.status(201).json({ category: { ...category.toObject(), id: category._id } });
 });
 
-router.put('/categories/:id', (req, res) => {
+router.put('/categories/:id', async (req, res) => {
   const { name, image, parentId, isActive } = req.body;
-  db.prepare(`UPDATE categories SET name=COALESCE(?,name), image=COALESCE(?,image),
-    parent_id=COALESCE(?,parent_id), is_active=COALESCE(?,is_active) WHERE id = ?`)
-    .run(name, image, parentId, isActive === undefined ? null : (isActive ? 1 : 0), req.params.id);
-  res.json({ category: db.prepare('SELECT * FROM categories WHERE id = ?').get(req.params.id) });
+  const update = {};
+  if (name !== undefined) update.name = name;
+  if (image !== undefined) update.image = image;
+  if (parentId !== undefined) update.parentId = parentId;
+  if (isActive !== undefined) update.isActive = isActive;
+  const category = await Category.findByIdAndUpdate(req.params.id, update, { new: true });
+  res.json({ category: { ...category.toObject(), id: category._id } });
 });
 
-router.delete('/categories/:id', (req, res) => {
-  db.prepare('DELETE FROM categories WHERE id = ?').run(req.params.id);
+router.delete('/categories/:id', async (req, res) => {
+  await Category.findByIdAndDelete(req.params.id);
   res.json({ message: 'Category deleted' });
 });
 
 // ---------------- ORDERS ----------------
-router.get('/orders', (req, res) => {
+router.get('/orders', async (req, res) => {
   const { status } = req.query;
-  let sql = `SELECT o.*, u.name as customer_name, u.email as customer_email FROM orders o JOIN users u ON o.user_id = u.id`;
-  const params = [];
-  if (status) { sql += ' WHERE o.status = ?'; params.push(status); }
-  sql += ' ORDER BY o.created_at DESC';
-  const orders = db.prepare(sql).all(...params);
-  res.json({ orders });
+  const filter = status ? { status } : {};
+  const orders = await Order.find(filter).sort({ createdAt: -1 }).lean();
+  const withCustomer = await Promise.all(orders.map(async (o) => {
+    const user = await User.findById(o.userId).lean();
+    return { ...o, id: o._id, customer_name: user?.name, customer_email: user?.email };
+  }));
+  res.json({ orders: withCustomer });
 });
 
-router.get('/orders/:id', (req, res) => {
-  const order = db.prepare(`SELECT o.*, u.name as customer_name, u.email as customer_email FROM orders o JOIN users u ON o.user_id = u.id WHERE o.id = ?`).get(req.params.id);
+router.get('/orders/:id', async (req, res) => {
+  const order = await Order.findById(req.params.id).lean();
   if (!order) return res.status(404).json({ error: 'Order not found' });
-  order.items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id);
-  order.tracking = db.prepare('SELECT * FROM order_tracking WHERE order_id = ? ORDER BY created_at').all(order.id);
-  res.json({ order });
+  const user = await User.findById(order.userId).lean();
+  res.json({ order: { ...order, id: order._id, customer_name: user?.name, customer_email: user?.email } });
 });
 
 const VALID_STATUSES = ['placed', 'confirmed', 'shipped', 'out_for_delivery', 'delivered', 'cancelled'];
-router.put('/orders/:id/status', (req, res) => {
+router.put('/orders/:id/status', async (req, res) => {
   const { status, note } = req.body;
   if (!VALID_STATUSES.includes(status)) return res.status(400).json({ error: 'Invalid status' });
-  db.prepare('UPDATE orders SET status = ? WHERE id = ?').run(status, req.params.id);
-  db.prepare('INSERT INTO order_tracking (id,order_id,status,note) VALUES (?,?,?,?)')
-    .run(uuid(), req.params.id, status, note || `Order status updated to ${status}`);
-  const order = db.prepare('SELECT user_id FROM orders WHERE id = ?').get(req.params.id);
+
+  const order = await Order.findByIdAndUpdate(
+    req.params.id,
+    {
+      status,
+      $push: { tracking: { status, note: note || `Order status updated to ${status}`, createdAt: new Date() } },
+    },
+    { new: true }
+  );
+
   if (order) {
-    db.prepare('INSERT INTO notifications (id,user_id,title,message) VALUES (?,?,?,?)')
-      .run(uuid(), order.user_id, 'Order Update', `Your order status is now: ${status.replace(/_/g, ' ')}`);
+    await Notification.create({
+      userId: order.userId,
+      title: 'Order Update',
+      message: `Your order status is now: ${status.replace(/_/g, ' ')}`,
+    });
   }
   res.json({ message: 'Order status updated' });
 });
 
 // ---------------- CUSTOMERS ----------------
-router.get('/customers', (req, res) => {
-  const customers = db.prepare(`
-    SELECT id, name, email, phone, created_at,
-    (SELECT COUNT(*) FROM orders WHERE orders.user_id = users.id) as order_count,
-    (SELECT COALESCE(SUM(total),0) FROM orders WHERE orders.user_id = users.id) as total_spent
-    FROM users WHERE role = 'customer' ORDER BY created_at DESC`).all();
-  res.json({ customers });
+router.get('/customers', async (req, res) => {
+  const customers = await User.find({ role: 'customer' }).sort({ createdAt: -1 }).lean();
+  const withStats = await Promise.all(customers.map(async (c) => {
+    const orders = await Order.find({ userId: c._id }).lean();
+    return {
+      id: c._id, name: c.name, email: c.email, phone: c.phone, created_at: c.createdAt,
+      order_count: orders.length,
+      total_spent: orders.reduce((sum, o) => sum + o.total, 0),
+    };
+  }));
+  res.json({ customers: withStats });
 });
 
 // ---------------- COUPONS ----------------
-router.get('/coupons', (req, res) => {
-  res.json({ coupons: db.prepare('SELECT * FROM coupons ORDER BY code').all() });
+router.get('/coupons', async (req, res) => {
+  const coupons = await Coupon.find().sort({ code: 1 }).lean();
+  res.json({ coupons: coupons.map((c) => ({ ...c, id: c._id })) });
 });
 
-router.post('/coupons', (req, res) => {
+router.post('/coupons', async (req, res) => {
   const { code, type, value, minOrderValue, maxDiscount, expiresAt, usageLimit } = req.body;
-  const id = uuid();
-  db.prepare(`INSERT INTO coupons (id,code,type,value,min_order_value,max_discount,expires_at,usage_limit)
-    VALUES (?,?,?,?,?,?,?,?)`)
-    .run(id, code.toUpperCase(), type, value, minOrderValue || 0, maxDiscount || null, expiresAt || null, usageLimit || 0);
-  res.status(201).json({ coupon: db.prepare('SELECT * FROM coupons WHERE id = ?').get(id) });
+  const coupon = await Coupon.create({
+    code: code.toUpperCase(), type, value,
+    minOrderValue: minOrderValue || 0, maxDiscount: maxDiscount || null,
+    expiresAt: expiresAt || null, usageLimit: usageLimit || 0,
+  });
+  res.status(201).json({ coupon: { ...coupon.toObject(), id: coupon._id } });
 });
 
-router.put('/coupons/:id', (req, res) => {
+router.put('/coupons/:id', async (req, res) => {
   const { isActive, value, minOrderValue, maxDiscount, expiresAt, usageLimit } = req.body;
-  db.prepare(`UPDATE coupons SET is_active=COALESCE(?,is_active), value=COALESCE(?,value),
-    min_order_value=COALESCE(?,min_order_value), max_discount=COALESCE(?,max_discount),
-    expires_at=COALESCE(?,expires_at), usage_limit=COALESCE(?,usage_limit) WHERE id = ?`)
-    .run(isActive, value, minOrderValue, maxDiscount, expiresAt, usageLimit, req.params.id);
-  res.json({ coupon: db.prepare('SELECT * FROM coupons WHERE id = ?').get(req.params.id) });
+  const update = {};
+  if (isActive !== undefined) update.isActive = isActive;
+  if (value !== undefined) update.value = value;
+  if (minOrderValue !== undefined) update.minOrderValue = minOrderValue;
+  if (maxDiscount !== undefined) update.maxDiscount = maxDiscount;
+  if (expiresAt !== undefined) update.expiresAt = expiresAt;
+  if (usageLimit !== undefined) update.usageLimit = usageLimit;
+  const coupon = await Coupon.findByIdAndUpdate(req.params.id, update, { new: true });
+  res.json({ coupon: { ...coupon.toObject(), id: coupon._id } });
 });
 
-router.delete('/coupons/:id', (req, res) => {
-  db.prepare('DELETE FROM coupons WHERE id = ?').run(req.params.id);
+router.delete('/coupons/:id', async (req, res) => {
+  await Coupon.findByIdAndDelete(req.params.id);
   res.json({ message: 'Coupon deleted' });
 });
 
 // ---------------- BANNERS ----------------
-router.get('/banners', (req, res) => {
-  res.json({ banners: db.prepare('SELECT * FROM banners ORDER BY position').all() });
+router.get('/banners', async (req, res) => {
+  const banners = await Banner.find().sort({ position: 1 }).lean();
+  res.json({ banners: banners.map((b) => ({ ...b, id: b._id })) });
 });
-router.post('/banners', (req, res) => {
+router.post('/banners', async (req, res) => {
   const { title, image, link, position } = req.body;
-  const id = uuid();
-  db.prepare('INSERT INTO banners (id,title,image,link,position) VALUES (?,?,?,?,?)').run(id, title, image, link || '', position || 0);
-  res.status(201).json({ banner: db.prepare('SELECT * FROM banners WHERE id = ?').get(id) });
+  const banner = await Banner.create({ title, image, link: link || '', position: position || 0 });
+  res.status(201).json({ banner: { ...banner.toObject(), id: banner._id } });
 });
-router.put('/banners/:id', (req, res) => {
+router.put('/banners/:id', async (req, res) => {
   const { title, image, link, position, isActive } = req.body;
-  db.prepare(`UPDATE banners SET title=COALESCE(?,title), image=COALESCE(?,image), link=COALESCE(?,link),
-    position=COALESCE(?,position), is_active=COALESCE(?,is_active) WHERE id = ?`)
-    .run(title, image, link, position, isActive, req.params.id);
-  res.json({ banner: db.prepare('SELECT * FROM banners WHERE id = ?').get(req.params.id) });
+  const update = {};
+  if (title !== undefined) update.title = title;
+  if (image !== undefined) update.image = image;
+  if (link !== undefined) update.link = link;
+  if (position !== undefined) update.position = position;
+  if (isActive !== undefined) update.isActive = isActive;
+  const banner = await Banner.findByIdAndUpdate(req.params.id, update, { new: true });
+  res.json({ banner: { ...banner.toObject(), id: banner._id } });
 });
-router.delete('/banners/:id', (req, res) => {
-  db.prepare('DELETE FROM banners WHERE id = ?').run(req.params.id);
+router.delete('/banners/:id', async (req, res) => {
+  await Banner.findByIdAndDelete(req.params.id);
   res.json({ message: 'Banner deleted' });
 });
 
 // ---------------- ADVERTISEMENTS ----------------
-router.get('/advertisements', (req, res) => {
-  res.json({ advertisements: db.prepare('SELECT * FROM advertisements').all() });
+router.get('/advertisements', async (req, res) => {
+  const advertisements = await Advertisement.find().lean();
+  res.json({ advertisements: advertisements.map((a) => ({ ...a, id: a._id })) });
 });
-router.post('/advertisements', (req, res) => {
+router.post('/advertisements', async (req, res) => {
   const { title, image, link, placement } = req.body;
-  const id = uuid();
-  db.prepare('INSERT INTO advertisements (id,title,image,link,placement) VALUES (?,?,?,?,?)').run(id, title, image, link || '', placement || 'home_top');
-  res.status(201).json({ advertisement: db.prepare('SELECT * FROM advertisements WHERE id = ?').get(id) });
+  const ad = await Advertisement.create({ title, image, link: link || '', placement: placement || 'home_top' });
+  res.status(201).json({ advertisement: { ...ad.toObject(), id: ad._id } });
 });
-router.delete('/advertisements/:id', (req, res) => {
-  db.prepare('DELETE FROM advertisements WHERE id = ?').run(req.params.id);
+router.delete('/advertisements/:id', async (req, res) => {
+  await Advertisement.findByIdAndDelete(req.params.id);
   res.json({ message: 'Advertisement deleted' });
 });
 
 // ---------------- REPORTS & ANALYTICS ----------------
-router.get('/reports/sales', (req, res) => {
+router.get('/reports/sales', async (req, res) => {
   const { from, to } = req.query;
-  let sql = 'SELECT date(created_at) as day, SUM(total) as revenue, COUNT(*) as orders FROM orders';
-  const params = [];
-  if (from && to) { sql += ' WHERE created_at BETWEEN ? AND ?'; params.push(from, to); }
-  sql += ' GROUP BY day ORDER BY day';
-  res.json({ rows: db.prepare(sql).all(...params) });
+  const match = {};
+  if (from && to) match.createdAt = { $gte: new Date(from), $lte: new Date(to) };
+  const rows = await Order.aggregate([
+    { $match: match },
+    { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, revenue: { $sum: '$total' }, orders: { $sum: 1 } } },
+    { $sort: { _id: 1 } },
+  ]);
+  res.json({ rows: rows.map((r) => ({ day: r._id, revenue: r.revenue, orders: r.orders })) });
 });
 
-router.get('/reports/top-products', (req, res) => {
-  const rows = db.prepare(`
-    SELECT p.title, p.id, SUM(oi.quantity) as units_sold, SUM(oi.quantity * oi.price) as revenue
-    FROM order_items oi JOIN products p ON oi.product_id = p.id
-    GROUP BY oi.product_id ORDER BY revenue DESC LIMIT 10`).all();
+router.get('/reports/top-products', async (req, res) => {
+  const agg = await Order.aggregate([
+    { $unwind: '$items' },
+    { $group: { _id: '$items.productId', units_sold: { $sum: '$items.quantity' }, revenue: { $sum: { $multiply: ['$items.quantity', '$items.price'] } } } },
+    { $sort: { revenue: -1 } },
+    { $limit: 10 },
+  ]);
+  const rows = await Promise.all(agg.map(async (r) => {
+    const p = await Product.findById(r._id).lean();
+    return { id: r._id, title: p?.title, units_sold: r.units_sold, revenue: r.revenue };
+  }));
   res.json({ rows });
 });
 
-router.get('/analytics/overview', (req, res) => {
-  const conversionInputs = {
-    totalUsers: db.prepare(`SELECT COUNT(*) c FROM users WHERE role='customer'`).get().c,
-    usersWithOrders: db.prepare(`SELECT COUNT(DISTINCT user_id) c FROM orders`).get().c,
-  };
-  const categoryBreakdown = db.prepare(`
-    SELECT c.name, COUNT(oi.id) as items_sold FROM order_items oi
-    JOIN products p ON oi.product_id = p.id
-    JOIN categories c ON p.category_id = c.id
-    GROUP BY c.id ORDER BY items_sold DESC`).all();
-  res.json({ conversionInputs, categoryBreakdown });
+router.get('/analytics/overview', async (req, res) => {
+  const totalUsers = await User.countDocuments({ role: 'customer' });
+  const usersWithOrdersAgg = await Order.aggregate([{ $group: { _id: '$userId' } }]);
+  const usersWithOrders = usersWithOrdersAgg.length;
+
+  const catAgg = await Order.aggregate([
+    { $unwind: '$items' },
+    { $group: { _id: '$items.productId', items_sold: { $sum: 1 } } },
+  ]);
+  const categoryMap = {};
+  for (const row of catAgg) {
+    const product = await Product.findById(row._id).lean();
+    if (!product) continue;
+    const cat = await Category.findById(product.categoryId).lean();
+    const name = cat?.name || 'Unknown';
+    categoryMap[name] = (categoryMap[name] || 0) + row.items_sold;
+  }
+  const categoryBreakdown = Object.entries(categoryMap)
+    .map(([name, items_sold]) => ({ name, items_sold }))
+    .sort((a, b) => b.items_sold - a.items_sold);
+
+  res.json({ conversionInputs: { totalUsers, usersWithOrders }, categoryBreakdown });
 });
 
 // ---------------- SETTINGS ----------------
-router.get('/settings', (req, res) => {
-  const rows = db.prepare('SELECT * FROM settings').all();
-  res.json({ settings: Object.fromEntries(rows.map(r => [r.key, r.value])) });
+router.get('/settings', async (req, res) => {
+  const rows = await Setting.find().lean();
+  res.json({ settings: Object.fromEntries(rows.map((r) => [r._id, r.value])) });
 });
-router.put('/settings', (req, res) => {
+router.put('/settings', async (req, res) => {
   const updates = req.body; // { key: value, ... }
-  const upsert = db.prepare(`INSERT INTO settings (key,value) VALUES (?,?)
-    ON CONFLICT(key) DO UPDATE SET value = excluded.value`);
-  Object.entries(updates).forEach(([k, v]) => upsert.run(k, String(v)));
-  const rows = db.prepare('SELECT * FROM settings').all();
-  res.json({ settings: Object.fromEntries(rows.map(r => [r.key, r.value])) });
+  for (const [k, v] of Object.entries(updates)) {
+    await Setting.findByIdAndUpdate(k, { value: String(v) }, { upsert: true });
+  }
+  const rows = await Setting.find().lean();
+  res.json({ settings: Object.fromEntries(rows.map((r) => [r._id, r.value])) });
 });
+
 // ---------------- HERO SLIDES ----------------
-router.get('/hero-slides', (req, res) => {
-  const rows = db.prepare('SELECT * FROM hero_slides ORDER BY position').all();
-  res.json({ slides: rows });
+router.get('/hero-slides', async (req, res) => {
+  const slides = await HeroSlide.find().sort({ position: 1 }).lean();
+  res.json({ slides: slides.map((s) => ({ ...s, id: s._id })) });
 });
-router.post('/hero-slides', (req, res) => {
-    const { mode, image, eyebrow, title, subtitle, specs = [], ctaText, ctaLink, position = 0, imageFit } = req.body;
-    const id = uuid();
-    db.prepare(`INSERT INTO hero_slides (id, mode, image, eyebrow, title, subtitle, specs, cta_text, cta_link, position, image_fit, is_active)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,1)`)
-      .run(id, mode || 'image_text', image, eyebrow || '', title || '', subtitle || '', JSON.stringify(specs), ctaText || '', ctaLink || '', position, imageFit || 'cover');
-    res.status(201).json({ slide: db.prepare('SELECT * FROM hero_slides WHERE id = ?').get(id) });
+router.post('/hero-slides', async (req, res) => {
+  const { mode, image, eyebrow, title, subtitle, specs = [], ctaText, ctaLink, position = 0, imageFit } = req.body;
+  const slide = await HeroSlide.create({
+    mode: mode || 'image_text', image, eyebrow: eyebrow || '', title: title || '', subtitle: subtitle || '',
+    specs, ctaText: ctaText || '', ctaLink: ctaLink || '', position, imageFit: imageFit || 'cover',
   });
-router.put('/hero-slides/:id', (req, res) => {
+  res.status(201).json({ slide: { ...slide.toObject(), id: slide._id } });
+});
+router.put('/hero-slides/:id', async (req, res) => {
   const { mode, image, eyebrow, title, subtitle, specs, ctaText, ctaLink, position, isActive, imageFit } = req.body;
-  db.prepare(`UPDATE hero_slides SET
-    mode=COALESCE(?,mode), image=COALESCE(?,image), eyebrow=COALESCE(?,eyebrow),
-    title=COALESCE(?,title), subtitle=COALESCE(?,subtitle),
-    specs=COALESCE(?,specs), cta_text=COALESCE(?,cta_text), cta_link=COALESCE(?,cta_link),
-    position=COALESCE(?,position), is_active=COALESCE(?,is_active), image_fit=COALESCE(?,image_fit) WHERE id = ?`)
-    .run(mode, image, eyebrow, title, subtitle, specs ? JSON.stringify(specs) : null, ctaText, ctaLink, position, isActive, imageFit, req.params.id);
-  res.json({ slide: db.prepare('SELECT * FROM hero_slides WHERE id = ?').get(req.params.id) });
+  const update = {};
+  if (mode !== undefined) update.mode = mode;
+  if (image !== undefined) update.image = image;
+  if (eyebrow !== undefined) update.eyebrow = eyebrow;
+  if (title !== undefined) update.title = title;
+  if (subtitle !== undefined) update.subtitle = subtitle;
+  if (specs !== undefined) update.specs = specs;
+  if (ctaText !== undefined) update.ctaText = ctaText;
+  if (ctaLink !== undefined) update.ctaLink = ctaLink;
+  if (position !== undefined) update.position = position;
+  if (isActive !== undefined) update.isActive = isActive;
+  if (imageFit !== undefined) update.imageFit = imageFit;
+  const slide = await HeroSlide.findByIdAndUpdate(req.params.id, update, { new: true });
+  res.json({ slide: { ...slide.toObject(), id: slide._id } });
 });
 
-
-router.delete('/hero-slides/:id', (req, res) => {
-  db.prepare('DELETE FROM hero_slides WHERE id = ?').run(req.params.id);
+router.delete('/hero-slides/:id', async (req, res) => {
+  await HeroSlide.findByIdAndDelete(req.params.id);
   res.json({ message: 'Slide deleted' });
 });
+
 module.exports = router;
+  
