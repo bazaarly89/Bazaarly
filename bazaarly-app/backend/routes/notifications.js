@@ -1,20 +1,20 @@
 const express = require('express');
-const db = require('../db');
+const { Notification } = require('../db');
 const { authRequired } = require('../middleware/auth');
 const router = express.Router();
 
-router.get('/', authRequired, (req, res) => {
-  const notifications = db.prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC').all(req.user.id);
-  res.json({ notifications });
+router.get('/', authRequired, async (req, res) => {
+  const notifications = await Notification.find({ userId: req.user.id }).sort({ createdAt: -1 }).lean();
+  res.json({ notifications: notifications.map((n) => ({ ...n, id: n._id })) });
 });
 
-router.put('/:id/read', authRequired, (req, res) => {
-  db.prepare('UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+router.put('/:id/read', authRequired, async (req, res) => {
+  await Notification.updateOne({ _id: req.params.id, userId: req.user.id }, { isRead: true });
   res.json({ message: 'ok' });
 });
 
-router.put('/read-all', authRequired, (req, res) => {
-  db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ?').run(req.user.id);
+router.put('/read-all', authRequired, async (req, res) => {
+  await Notification.updateMany({ userId: req.user.id }, { isRead: true });
   res.json({ message: 'ok' });
 });
 
