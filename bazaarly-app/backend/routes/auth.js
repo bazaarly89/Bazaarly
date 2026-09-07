@@ -1,9 +1,8 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { v4: uuid } = require('uuid');
 const { body, validationResult } = require('express-validator');
-const db = require('../db');
+const { User, Otp } = require('../db');
 const { authRequired } = require('../middleware/auth');
 const { sendOtpEmail } = require('../utils/mailer');
 
@@ -23,40 +22,39 @@ router.post('/register',
   body('name').notEmpty(),
   body('email').isEmail(),
   body('password').isLength({ min: 6 }),
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
     const { name, email, password, phone } = req.body;
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+    const existing = await User.findOne({ email });
     if (existing) return res.status(409).json({ error: 'Email already registered' });
 
-    const id = uuid();
     const hash = bcrypt.hashSync(password, 10);
-    db.prepare('INSERT INTO users (id,name,email,password,phone,role) VALUES (?,?,?,?,?,?)')
-      .run(id, name, email, hash, phone || null, 'customer');
+    const user = await User.create({ name, email, password: hash, phone: phone || null, role: 'customer' });
 
-    const user = { id, name, email, role: 'customer' };
-    res.status(201).json({ token: signUserToken(user), user });
+    const userPayload = { id: user._id, name: user.name, email: user.email, role: 'customer' };
+    res.status(201).json({ token: signUserToken(userPayload), user: userPayload });
   });
 
 // ---------- LOGIN ----------
-router.post('/login', body('email').isEmail(), body('password').notEmpty(), (req, res) => {
+router.post('/login', body('email').isEmail(), body('password').notEmpty(), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
   const { email, password } = req.body;
-  const user = db.prepare('SELECT * FROM users WHERE email = ? AND role = ?').get(email, 'customer');
+  const user = await User.findOne({ email, role: 'customer' });
   if (!user || !bcrypt.compareSync(password, user.password)) {
     return res.status(401).json({ error: 'Invalid email or password' });
   }
-  res.json({ token: signUserToken(user), user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+  const userPayload = { id: user._id, name: user.name, email: user.email, role: user.role };
+  res.json({ token: signUserToken(userPayload), user: userPayload });
 });
 
 // ---------- FORGOT PASSWORD (sends a 6-digit OTP to the user's email) ----------
 router.post('/forgot-password', body('email').isEmail(), async (req, res) => {
   const { email } = req.body;
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  const user = await User.findOne({ email });
 
   // Always respond the same way to avoid revealing whether an email is registered
   const genericMessage = { message: 'If that email exists, an OTP has been sent.' };
@@ -64,8 +62,7 @@ router.post('/forgot-password', body('email').isEmail(), async (req, res) => {
 
   const code = generateOtp();
   const expiry = Date.now() + 1000 * 60 * 10; // 10 minutes
-  db.prepare('INSERT INTO otps (id, email, code, purpose, expires_at) VALUES (?,?,?,?,?)')
-    .run(uuid(), email, code, 'reset_password', expiry);
+  await Otp.create({ email, code, purpose: 'reset_password', expiresAt: expiry });
 
   try {
     await sendOtpEmail(email, code, 'reset_password');
@@ -82,56 +79,57 @@ router.post('/reset-password',
   body('email').isEmail(),
   body('otp').notEmpty(),
   body('password').isLength({ min: 6 }),
-  (req, res) => {
+  async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
 
     const { email, otp, password } = req.body;
 
-    const record = db.prepare(
-      `SELECT * FROM otps WHERE email = ? AND code = ? AND purpose = 'reset_password' AND used = 0
-       ORDER BY created_at DESC LIMIT 1`
-    ).get(email, otp);
+    const record = await Otp.findOne({ email, code: otp, purpose: 'reset_password', used: false })
+      .sort({ createdAt: -1 });
 
-    if (!record || record.expires_at < Date.now()) {
+    if (!record || record.expiresAt < Date.now()) {
       return res.status(400).json({ error: 'OTP is invalid or expired' });
     }
 
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ error: 'OTP is invalid or expired' });
 
     const hash = bcrypt.hashSync(password, 10);
-    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hash, user.id);
-    db.prepare('UPDATE otps SET used = 1 WHERE id = ?').run(record.id);
+    user.password = hash;
+    await user.save();
+    record.used = true;
+    await record.save();
 
     res.json({ message: 'Password updated successfully' });
   });
 
 // ---------- CURRENT USER ----------
-router.get('/me', authRequired, (req, res) => {
-  const user = db.prepare('SELECT id,name,email,phone,role,created_at FROM users WHERE id = ?').get(req.user.id);
+router.get('/me', authRequired, async (req, res) => {
+  const user = await User.findById(req.user.id).select('name email phone role createdAt').lean();
   if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json({ user });
+  res.json({ user: { ...user, id: user._id } });
 });
 
-router.put('/me', authRequired, (req, res) => {
+router.put('/me', authRequired, async (req, res) => {
   const { name, phone } = req.body;
-  db.prepare('UPDATE users SET name = COALESCE(?,name), phone = COALESCE(?,phone) WHERE id = ?')
-    .run(name, phone, req.user.id);
-  const user = db.prepare('SELECT id,name,email,phone,role FROM users WHERE id = ?').get(req.user.id);
-  res.json({ user });
+  const update = {};
+  if (name !== undefined) update.name = name;
+  if (phone !== undefined) update.phone = phone;
+  const user = await User.findByIdAndUpdate(req.user.id, update, { new: true }).select('name email phone role').lean();
+  res.json({ user: { ...user, id: user._id } });
 });
 
 // ---------- ADMIN LOGIN ----------
-router.post('/admin/login', body('email').isEmail(), body('password').notEmpty(), (req, res) => {
+router.post('/admin/login', body('email').isEmail(), body('password').notEmpty(), async (req, res) => {
   const { email, password } = req.body;
-  const admin = db.prepare('SELECT * FROM users WHERE email = ? AND role = ?').get(email, 'admin');
+  const admin = await User.findOne({ email, role: 'admin' });
   if (!admin || !bcrypt.compareSync(password, admin.password)) {
     return res.status(401).json({ error: 'Invalid admin credentials' });
   }
-  const token = jwt.sign({ id: admin.id, email: admin.email, role: 'admin', name: admin.name },
+  const token = jwt.sign({ id: admin._id, email: admin.email, role: 'admin', name: admin.name },
     process.env.JWT_ADMIN_SECRET, { expiresIn: '12h' });
-  res.json({ token, admin: { id: admin.id, name: admin.name, email: admin.email } });
+  res.json({ token, admin: { id: admin._id, name: admin.name, email: admin.email } });
 });
 
 module.exports = router;
