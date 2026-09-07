@@ -1,16 +1,16 @@
 const express = require('express');
-const db = require('../db');
+const { Category } = require('../db');
 const router = express.Router();
 
-router.get('/', (req, res) => {
-  const categories = db.prepare('SELECT * FROM categories WHERE is_active = 1 ORDER BY name').all();
-  res.json({ categories });
+router.get('/', async (req, res) => {
+  const categories = await Category.find({ isActive: true }).sort({ name: 1 }).lean();
+  res.json({ categories: categories.map((c) => ({ ...c, id: c._id })) });
 });
 
-router.get('/:slug', (req, res) => {
-  const category = db.prepare('SELECT * FROM categories WHERE slug = ? AND is_active = 1').get(req.params.slug);
+router.get('/:slug', async (req, res) => {
+  const category = await Category.findOne({ slug: req.params.slug, isActive: true }).lean();
   if (!category) return res.status(404).json({ error: 'Category not found' });
-  res.json({ category });
+  res.json({ category: { ...category, id: category._id } });
 });
 
 module.exports = router;
