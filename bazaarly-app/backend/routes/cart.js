@@ -1,57 +1,63 @@
 const express = require('express');
-const { v4: uuid } = require('uuid');
-const db = require('../db');
+const { CartItem, Product } = require('../db');
 const { authRequired } = require('../middleware/auth');
 const router = express.Router();
 
-function getCart(userId) {
-  return db.prepare(`
-    SELECT ci.id as cart_item_id, ci.quantity, p.*
-    FROM cart_items ci JOIN products p ON ci.product_id = p.id
-    WHERE ci.user_id = ?
-  `).all(userId).map(row => {
-    const thumb = db.prepare('SELECT url FROM product_images WHERE product_id = ? ORDER BY position LIMIT 1').get(row.id);
-    return { ...row, thumbnail: thumb ? thumb.url : null };
-  });
+async function getCart(userId) {
+  const items = await CartItem.find({ userId }).lean();
+  const results = [];
+  for (const item of items) {
+    const product = await Product.findById(item.productId).lean();
+    if (!product) continue; // product may have been deleted
+    const sortedImages = (product.images || []).slice().sort((a, b) => a.position - b.position);
+    results.push({
+      ...product,
+      id: product._id,
+      cart_item_id: item._id,
+      quantity: item.quantity,
+      thumbnail: sortedImages[0]?.url || null,
+    });
+  }
+  return results;
 }
 
-router.get('/', authRequired, (req, res) => {
-  res.json({ items: getCart(req.user.id) });
+router.get('/', authRequired, async (req, res) => {
+  res.json({ items: await getCart(req.user.id) });
 });
 
-router.post('/', authRequired, (req, res) => {
+router.post('/', authRequired, async (req, res) => {
   const { productId, quantity = 1 } = req.body;
-  const product = db.prepare('SELECT * FROM products WHERE id = ?').get(productId);
+  const product = await Product.findById(productId);
   if (!product) return res.status(404).json({ error: 'Product not found' });
+  if (product.productType === 'affiliate') return res.status(400).json({ error: 'This product cannot be added to cart — use the Check Deal link instead' });
 
-  const existing = db.prepare('SELECT * FROM cart_items WHERE user_id = ? AND product_id = ?').get(req.user.id, productId);
+  const existing = await CartItem.findOne({ userId: req.user.id, productId });
   if (existing) {
-    db.prepare('UPDATE cart_items SET quantity = quantity + ? WHERE id = ?').run(quantity, existing.id);
+    existing.quantity += quantity;
+    await existing.save();
   } else {
-    db.prepare('INSERT INTO cart_items (id,user_id,product_id,quantity) VALUES (?,?,?,?)')
-      .run(uuid(), req.user.id, productId, quantity);
+    await CartItem.create({ userId: req.user.id, productId, quantity });
   }
-  res.status(201).json({ items: getCart(req.user.id) });
+  res.status(201).json({ items: await getCart(req.user.id) });
 });
 
-router.put('/:cartItemId', authRequired, (req, res) => {
+router.put('/:cartItemId', authRequired, async (req, res) => {
   const { quantity } = req.body;
   if (quantity <= 0) {
-    db.prepare('DELETE FROM cart_items WHERE id = ? AND user_id = ?').run(req.params.cartItemId, req.user.id);
+    await CartItem.deleteOne({ _id: req.params.cartItemId, userId: req.user.id });
   } else {
-    db.prepare('UPDATE cart_items SET quantity = ? WHERE id = ? AND user_id = ?')
-      .run(quantity, req.params.cartItemId, req.user.id);
+    await CartItem.updateOne({ _id: req.params.cartItemId, userId: req.user.id }, { quantity });
   }
-  res.json({ items: getCart(req.user.id) });
+  res.json({ items: await getCart(req.user.id) });
 });
 
-router.delete('/:cartItemId', authRequired, (req, res) => {
-  db.prepare('DELETE FROM cart_items WHERE id = ? AND user_id = ?').run(req.params.cartItemId, req.user.id);
-  res.json({ items: getCart(req.user.id) });
+router.delete('/:cartItemId', authRequired, async (req, res) => {
+  await CartItem.deleteOne({ _id: req.params.cartItemId, userId: req.user.id });
+  res.json({ items: await getCart(req.user.id) });
 });
 
-router.delete('/', authRequired, (req, res) => {
-  db.prepare('DELETE FROM cart_items WHERE user_id = ?').run(req.user.id);
+router.delete('/', authRequired, async (req, res) => {
+  await CartItem.deleteMany({ userId: req.user.id });
   res.json({ items: [] });
 });
 
