@@ -1,35 +1,35 @@
 const express = require('express');
-const { v4: uuid } = require('uuid');
-const db = require('../db');
+const { Wishlist, Product } = require('../db');
 const { authRequired } = require('../middleware/auth');
 const router = express.Router();
 
-function getWishlist(userId) {
-  return db.prepare(`
-    SELECT w.id as wishlist_id, p.* FROM wishlist w
-    JOIN products p ON w.product_id = p.id
-    WHERE w.user_id = ? ORDER BY w.created_at DESC
-  `).all(userId).map(row => {
-    const thumb = db.prepare('SELECT url FROM product_images WHERE product_id = ? ORDER BY position LIMIT 1').get(row.id);
-    return { ...row, thumbnail: thumb ? thumb.url : null };
-  });
+async function getWishlist(userId) {
+  const wishItems = await Wishlist.find({ userId }).sort({ createdAt: -1 }).lean();
+  const results = [];
+  for (const w of wishItems) {
+    const product = await Product.findById(w.productId).lean();
+    if (!product) continue;
+    const sortedImages = (product.images || []).slice().sort((a, b) => a.position - b.position);
+    results.push({ ...product, id: product._id, wishlist_id: w._id, thumbnail: sortedImages[0]?.url || null });
+  }
+  return results;
 }
 
-router.get('/', authRequired, (req, res) => {
-  res.json({ items: getWishlist(req.user.id) });
+router.get('/', authRequired, async (req, res) => {
+  res.json({ items: await getWishlist(req.user.id) });
 });
 
-router.post('/', authRequired, (req, res) => {
+router.post('/', authRequired, async (req, res) => {
   const { productId } = req.body;
   try {
-    db.prepare('INSERT INTO wishlist (id,user_id,product_id) VALUES (?,?,?)').run(uuid(), req.user.id, productId);
-  } catch (e) { /* already in wishlist - ignore unique constraint error */ }
-  res.status(201).json({ items: getWishlist(req.user.id) });
+    await Wishlist.create({ userId: req.user.id, productId });
+  } catch (e) { /* already in wishlist - ignore duplicate key error */ }
+  res.status(201).json({ items: await getWishlist(req.user.id) });
 });
 
-router.delete('/:productId', authRequired, (req, res) => {
-  db.prepare('DELETE FROM wishlist WHERE user_id = ? AND product_id = ?').run(req.user.id, req.params.productId);
-  res.json({ items: getWishlist(req.user.id) });
+router.delete('/:productId', authRequired, async (req, res) => {
+  await Wishlist.deleteOne({ userId: req.user.id, productId: req.params.productId });
+  res.json({ items: await getWishlist(req.user.id) });
 });
 
 module.exports = router;
