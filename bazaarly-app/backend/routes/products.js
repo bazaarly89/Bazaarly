@@ -1,84 +1,90 @@
 const express = require('express');
-const db = require('../db');
+const { Product, Category, Review, User } = require('../db');
 const router = express.Router();
 
-function attachImages(product) {
-  const images = db.prepare('SELECT url FROM product_images WHERE product_id = ? ORDER BY position').all(product.id).map(i => i.url);
-  return { ...product, images };
+function formatProduct(p, categoryDoc) {
+  const obj = p.toObject ? p.toObject() : p;
+  const sortedImages = (obj.images || []).slice().sort((a, b) => a.position - b.position).map((i) => i.url);
+  return {
+    ...obj,
+    id: obj._id,
+    category_name: categoryDoc?.name,
+    category_slug: categoryDoc?.slug,
+    images: sortedImages,
+    thumbnail: sortedImages[0] || null,
+  };
 }
 
 // GET /api/products?search=&category=&minPrice=&maxPrice=&brand=&rating=&sort=&page=&limit=
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { search, category, minPrice, maxPrice, brand, rating, sort, page = 1, limit = 12 } = req.query;
-  let where = 'WHERE p.is_active = 1';
-  const params = [];
+  const filter = { isActive: true };
+  const andConditions = [];
 
   if (search) {
-    where += ' AND (p.title LIKE ? OR p.description LIKE ? OR p.brand LIKE ?)';
-    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    const regex = new RegExp(search, 'i');
+    andConditions.push({ $or: [{ title: regex }, { description: regex }, { brand: regex }] });
   }
   if (category) {
-    where += ' AND c.slug = ?';
-    params.push(category);
+    const cat = await Category.findOne({ slug: category });
+    filter.categoryId = cat ? cat._id : '__none__'; // no matching category => no results
   }
-  if (brand) {
-    where += ' AND p.brand = ?';
-    params.push(brand);
+  if (brand) filter.brand = brand;
+
+  // Price filter must work across own products (price) and affiliate products (currentPrice)
+  if (minPrice || maxPrice) {
+    const priceFilter = {};
+    if (minPrice) priceFilter.$gte = Number(minPrice);
+    if (maxPrice) priceFilter.$lte = Number(maxPrice);
+    andConditions.push({ $or: [{ price: priceFilter }, { currentPrice: priceFilter }] });
   }
-  if (minPrice) { where += ' AND p.price >= ?'; params.push(Number(minPrice)); }
-  if (maxPrice) { where += ' AND p.price <= ?'; params.push(Number(maxPrice)); }
-  if (rating) { where += ' AND p.rating >= ?'; params.push(Number(rating)); }
 
-  let orderBy = 'p.created_at DESC';
-  if (sort === 'price_asc') orderBy = 'p.price ASC';
-  if (sort === 'price_desc') orderBy = 'p.price DESC';
-  if (sort === 'rating') orderBy = 'p.rating DESC';
-  if (sort === 'popular') orderBy = 'p.rating_count DESC';
+  if (rating) filter.rating = { $gte: Number(rating) };
+  if (andConditions.length) filter.$and = andConditions;
 
-  const offset = (Number(page) - 1) * Number(limit);
+  let sortSpec = { createdAt: -1 };
+  if (sort === 'price_asc') sortSpec = { price: 1 };
+  if (sort === 'price_desc') sortSpec = { price: -1 };
+  if (sort === 'rating') sortSpec = { rating: -1 };
+  if (sort === 'popular') sortSpec = { ratingCount: -1 };
 
-  const total = db.prepare(`
-    SELECT COUNT(*) c FROM products p LEFT JOIN categories c ON p.category_id = c.id ${where}
-  `).get(...params).c;
+  const skip = (Number(page) - 1) * Number(limit);
 
-  const rows = db.prepare(`
-    SELECT p.*, c.name as category_name, c.slug as category_slug
-    FROM products p LEFT JOIN categories c ON p.category_id = c.id
-    ${where}
-    ORDER BY ${orderBy}
-    LIMIT ? OFFSET ?
-  `).all(...params, Number(limit), offset);
+  const total = await Product.countDocuments(filter);
+  const rows = await Product.find(filter).sort(sortSpec).skip(skip).limit(Number(limit)).lean();
 
-  const products = rows.map(r => {
-    const thumb = db.prepare('SELECT url FROM product_images WHERE product_id = ? ORDER BY position LIMIT 1').get(r.id);
-    return { ...r, thumbnail: thumb ? thumb.url : null };
-  });
+  const categoryIds = [...new Set(rows.map((r) => r.categoryId).filter(Boolean))];
+  const categoryDocs = await Category.find({ _id: { $in: categoryIds } }).lean();
+  const categoryMap = Object.fromEntries(categoryDocs.map((c) => [c._id, c]));
+
+  const products = rows.map((r) => formatProduct(r, categoryMap[r.categoryId]));
 
   res.json({ products, total, page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / limit) });
 });
 
 // GET /api/products/brands - distinct brands for filter UI
-router.get('/brands', (req, res) => {
-  const brands = db.prepare('SELECT DISTINCT brand FROM products WHERE brand IS NOT NULL').all().map(b => b.brand);
+router.get('/brands', async (req, res) => {
+  const brands = await Product.distinct('brand', { brand: { $nin: [null, ''] } });
   res.json({ brands });
 });
 
 // GET /api/products/:slug
-router.get('/:slug', (req, res) => {
-  const product = db.prepare(`
-    SELECT p.*, c.name as category_name, c.slug as category_slug
-    FROM products p LEFT JOIN categories c ON p.category_id = c.id
-    WHERE p.slug = ? AND p.is_active = 1
-  `).get(req.params.slug);
+router.get('/:slug', async (req, res) => {
+  const product = await Product.findOne({ slug: req.params.slug, isActive: true }).lean();
   if (!product) return res.status(404).json({ error: 'Product not found' });
 
-  const attributes = db.prepare('SELECT attr_key, attr_value FROM product_attributes WHERE product_id = ?').all(product.id);
-  const reviews = db.prepare(`
-    SELECT r.*, u.name as user_name FROM reviews r JOIN users u ON r.user_id = u.id
-    WHERE r.product_id = ? ORDER BY r.created_at DESC
-  `).all(product.id);
+  const categoryDoc = product.categoryId ? await Category.findById(product.categoryId).lean() : null;
 
-  res.json({ product: attachImages(product), attributes, reviews });
+  const attributes = (product.attributes || []).map((a) => ({ attr_key: a.key, attr_value: a.value }));
+
+  const reviewDocs = await Review.find({ productId: product._id }).sort({ createdAt: -1 }).lean();
+  const reviews = await Promise.all(reviewDocs.map(async (r) => {
+    const user = await User.findById(r.userId).lean();
+    return { ...r, id: r._id, user_name: user?.name };
+  }));
+
+  res.json({ product: formatProduct(product, categoryDoc), attributes, reviews });
 });
 
 module.exports = router;
+
