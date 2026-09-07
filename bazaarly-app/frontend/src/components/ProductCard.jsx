@@ -10,13 +10,24 @@ export default function ProductCard({ product }) {
   const { user } = useAuth();
   const [busy, setBusy] = useState(false);
   const [wished, setWished] = useState(false);
-  const discount = Math.round(((product.mrp - product.price) / product.mrp) * 100);
+  const isAffiliate = product.productType === 'affiliate';
+
+  const displayPrice = isAffiliate ? product.currentPrice : product.price;
+  const displayOriginal = isAffiliate ? product.originalPrice : product.mrp;
+  const discount = isAffiliate
+    ? (product.discountPercentage || (displayOriginal ? Math.round(((displayOriginal - displayPrice) / displayOriginal) * 100) : 0))
+    : Math.round(((product.mrp - product.price) / product.mrp) * 100);
 
   const handleAdd = async (e) => {
     e.preventDefault();
     if (!user) return (window.location.href = '/login');
     setBusy(true);
     try { await addToCart(product.id, 1); } finally { setBusy(false); }
+  };
+
+  const handleCheckDeal = (e) => {
+    e.preventDefault();
+    if (product.affiliateUrl) window.open(product.affiliateUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleWishlist = async (e) => {
@@ -40,6 +51,11 @@ export default function ProductCard({ product }) {
             -{discount}%
           </span>
         )}
+        {isAffiliate && (
+          <span className="absolute top-3 right-12 rounded-full bg-purple-500 px-2.5 py-1 text-xs font-bold text-white shadow">
+            Deal
+          </span>
+        )}
         <button
           onClick={handleWishlist}
           className="absolute top-3 right-3 grid h-9 w-9 place-items-center rounded-full bg-white/90 shadow hover:scale-110 transition"
@@ -50,21 +66,37 @@ export default function ProductCard({ product }) {
           </svg>
         </button>
         <div className="absolute inset-x-0 bottom-0 translate-y-full bg-white/95 backdrop-blur px-3 py-2 transition-transform duration-300 group-hover:translate-y-0">
-          <button onClick={handleAdd} disabled={busy} className="btn-primary w-full text-sm py-2">
-            {busy ? 'Adding…' : 'Add to Cart'}
-          </button>
+          {isAffiliate ? (
+            <button onClick={handleCheckDeal} className="btn-primary w-full text-sm py-2">
+              {product.ctaText || 'Check Deal'}
+            </button>
+          ) : (
+            <button onClick={handleAdd} disabled={busy} className="btn-primary w-full text-sm py-2">
+              {busy ? 'Adding…' : 'Add to Cart'}
+            </button>
+          )}
         </div>
       </div>
       <div className="p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-brand-500">{product.brand}</p>
-        <h3 className="mt-1 line-clamp-2 font-medium text-slate-800">{product.title}</h3>
-        <div className="mt-1.5"><StarRating value={product.rating} count={product.rating_count} showValue size={14} /></div>
-        <div className="mt-2 flex items-baseline gap-2">
-          <span className="text-lg font-bold text-slate-900">₹{product.price?.toLocaleString()}</span>
-          {product.mrp > product.price && (
-            <span className="text-sm text-slate-400 line-through">₹{product.mrp?.toLocaleString()}</span>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-500">{product.brand}</p>
+          {isAffiliate && product.merchant && (
+            <p className="text-[11px] font-medium text-slate-400">via {product.merchant}</p>
           )}
         </div>
+        <h3 className="mt-1 line-clamp-2 font-medium text-slate-800">{product.title}</h3>
+        {!isAffiliate && (
+          <div className="mt-1.5"><StarRating value={product.rating} count={product.rating_count} showValue size={14} /></div>
+        )}
+        <div className="mt-2 flex items-baseline gap-2">
+          <span className="text-lg font-bold text-slate-900">₹{displayPrice?.toLocaleString()}</span>
+          {displayOriginal > displayPrice && (
+            <span className="text-sm text-slate-400 line-through">₹{displayOriginal?.toLocaleString()}</span>
+          )}
+        </div>
+        {isAffiliate && (
+          <p className="mt-1 text-[11px] text-slate-400">Affiliate link</p>
+        )}
       </div>
     </Link>
   );
