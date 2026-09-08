@@ -98,7 +98,7 @@ imageFit: form.imageFit,
   };
 
   const toggleActive = async (s) => {
-    await AdminApi.updateHeroSlide(s.id, { isActive: s.is_active ? false : true });
+    await AdminApi.updateHeroSlide(s.id, { isActive: s.isActive ? false : true });
     load();
   };
 
@@ -174,19 +174,19 @@ imageFit: form.imageFit,
 
       <div className="space-y-4">
         {slides.map((s) => (
-          <div key={s.id} className={`card flex items-center gap-4 p-4 ${!s.is_active ? 'opacity-50' : ''}`}>
+          <div key={s.id} className={`card flex items-center gap-4 p-4 ${!s.isActive ? 'opacity-50' : ''}`}>
             <img src={s.image} alt={s.title} className="h-20 w-32 rounded-lg object-cover" />
             <div className="flex-1">
               <p className="font-semibold">{s.title || '(image only banner)'}</p>
               <p className="text-sm text-slate-500">{s.mode === 'banner' ? 'Image-only slide' : s.subtitle} · Position {s.position}</p>
-              <span className={`text-xs font-semibold ${s.is_active ? 'text-green-600' : 'text-slate-400'}`}>
-                {s.is_active ? 'Visible on homepage' : 'Hidden'}
+              <span className={`text-xs font-semibold ${s.isActive ? 'text-green-600' : 'text-slate-400'}`}>
+                {s.isActive ? 'Visible on homepage' : 'Hidden'}
               </span>
             </div>
             <div className="space-x-3 text-sm">
               <button onClick={() => startEdit(s)} className="text-brand-600 hover:underline">Edit</button>
               <button onClick={() => toggleActive(s)} className="text-slate-500 hover:underline">
-                {s.is_active ? 'Hide' : 'Show'}
+                {s.isActive ? 'Hide' : 'Show'}
               </button>
               <button onClick={() => remove(s.id)} className="text-red-500 hover:underline">Delete</button>
             </div>
