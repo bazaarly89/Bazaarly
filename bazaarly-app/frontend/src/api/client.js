@@ -50,6 +50,9 @@ siteContent: () => unwrap(api.get('/content')),
   heroSlides: () => unwrap(api.get('/hero-slides')),
   // homepage "Why Choose Dostivox?" cards (public, read-only)
   trustCards: () => unwrap(api.get('/trust-cards')),
+  navigation: () => unwrap(api.get('/navigation')),
+  footer: () => unwrap(api.get('/footer')),
+  homeSections: () => unwrap(api.get('/home-sections')),
 
   // cart
   getCart: () => unwrap(api.get('/cart')),
@@ -135,10 +138,28 @@ export const AdminApi = {
   updateTrustCard: (id, data) => unwrap(adminApi.put(`/admin/trust-cards/${id}`, data)),
   deleteTrustCard: (id) => unwrap(adminApi.delete(`/admin/trust-cards/${id}`)),
 
+  navItems: () => unwrap(adminApi.get('/admin/nav-items')),
+  createNavItem: (data) => unwrap(adminApi.post('/admin/nav-items', data)),
+  updateNavItem: (id, data) => unwrap(adminApi.put(`/admin/nav-items/${id}`, data)),
+  deleteNavItem: (id) => unwrap(adminApi.delete(`/admin/nav-items/${id}`)),
+
+  footerColumns: () => unwrap(adminApi.get('/admin/footer-columns')),
+  createFooterColumn: (data) => unwrap(adminApi.post('/admin/footer-columns', data)),
+  updateFooterColumn: (id, data) => unwrap(adminApi.put(`/admin/footer-columns/${id}`, data)),
+  deleteFooterColumn: (id) => unwrap(adminApi.delete(`/admin/footer-columns/${id}`)),
+  createFooterLink: (data) => unwrap(adminApi.post('/admin/footer-links', data)),
+  updateFooterLink: (id, data) => unwrap(adminApi.put(`/admin/footer-links/${id}`, data)),
+  deleteFooterLink: (id) => unwrap(adminApi.delete(`/admin/footer-links/${id}`)),
+
+  homeSections: () => unwrap(adminApi.get('/admin/home-sections')),
+  updateHomeSection: (id, data) => unwrap(adminApi.put(`/admin/home-sections/${id}`, data)),
+  reorderHomeSections: (order) => unwrap(adminApi.put('/admin/home-sections-reorder', { order })),
+
   salesReport: (params) => unwrap(adminApi.get('/admin/reports/sales', { params })),
   topProducts: () => unwrap(adminApi.get('/admin/reports/top-products')),
   analyticsOverview: () => unwrap(adminApi.get('/admin/analytics/overview')),
 
   settings: () => unwrap(adminApi.get('/admin/settings')),
   updateSettings: (data) => unwrap(adminApi.put('/admin/settings', data)),
+  changePassword: (data) => unwrap(adminApi.put('/admin/change-password', data)),
 };
