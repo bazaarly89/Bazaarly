@@ -241,6 +241,46 @@ const heroSlideSchema = new mongoose.Schema({
 });
 
 // ---------------- TRUST CARDS (the "Why Choose Dostivox?" section) ----------------
+// ---------------- HOMEPAGE SECTIONS (title/subtitle/order/enable for each block) ----------------
+const homeSectionSchema = new mongoose.Schema({
+  _id: { type: String, default: uuid },
+  key: { type: String, required: true, unique: true }, // categories | trending | deals | trust_cards
+  title: { type: String, default: '' },
+  subtitle: { type: String, default: '' },
+  buttonText: { type: String, default: '' },
+  buttonLink: { type: String, default: '' },
+  isEnabled: { type: Boolean, default: true },
+  position: { type: Number, default: 0 },
+});
+
+// ---------------- NAVIGATION MENU (header links, admin-editable) ----------------
+const navItemSchema = new mongoose.Schema({
+  _id: { type: String, default: uuid },
+  label: { type: String, required: true },
+  url: { type: String, required: true },
+  icon: { type: String, default: '' },
+  isExternal: { type: Boolean, default: false },
+  isVisible: { type: Boolean, default: true },
+  position: { type: Number, default: 0 },
+  parentId: { type: String, default: null }, // for dropdown sub-items
+});
+
+// ---------------- FOOTER MANAGEMENT (columns + links, admin-editable) ----------------
+const footerColumnSchema = new mongoose.Schema({
+  _id: { type: String, default: uuid },
+  title: { type: String, required: true },
+  position: { type: Number, default: 0 },
+  isActive: { type: Boolean, default: true },
+});
+
+const footerLinkSchema = new mongoose.Schema({
+  _id: { type: String, default: uuid },
+  columnId: { type: String, required: true },
+  label: { type: String, required: true },
+  url: { type: String, required: true },
+  position: { type: Number, default: 0 },
+});
+
 const trustCardSchema = new mongoose.Schema({
   _id: { type: String, default: uuid },
   icon: { type: String, default: '%' }, // any short text/emoji shown as the icon
@@ -289,6 +329,10 @@ const Otp = mongoose.model('Otp', otpSchema);
 const HeroSlide = mongoose.model('HeroSlide', heroSlideSchema);
 const Article = mongoose.model('Article', articleSchema);
 const TrustCard = mongoose.model('TrustCard', trustCardSchema);
+const HomeSection = mongoose.model('HomeSection', homeSectionSchema);
+const NavItem = mongoose.model('NavItem', navItemSchema);
+const FooterColumn = mongoose.model('FooterColumn', footerColumnSchema);
+const FooterLink = mongoose.model('FooterLink', footerLinkSchema);
 
 // ---------------- SEED DEMO DATA (only if database is empty) ----------------
 
@@ -385,6 +429,55 @@ async function seed() {
     ]);
     console.log('✅ Trust cards seeded');
   }
+  const homeSectionCount = await HomeSection.countDocuments();
+  if (homeSectionCount === 0) {
+    await HomeSection.create([
+      { key: 'categories', title: 'Shop by Category', subtitle: '', buttonText: '', buttonLink: '', isEnabled: true, position: 0 },
+      { key: 'trending', title: 'Trending Products', subtitle: '', buttonText: 'View All ›', buttonLink: '/products', isEnabled: true, position: 1 },
+      { key: 'deals', title: "Today's Deals", subtitle: '', buttonText: 'View All ›', buttonLink: '/products?sort=price_asc', isEnabled: true, position: 2 },
+      { key: 'trust_cards', title: 'Why Choose Dostivox?', subtitle: '', buttonText: '', buttonLink: '', isEnabled: true, position: 3 },
+    ]);
+    console.log('✅ Homepage sections seeded');
+  }
+
+  const navCount = await NavItem.countDocuments();
+  if (navCount === 0) {
+    await NavItem.create([
+      { label: 'Home', url: '/', position: 0 },
+      { label: 'Categories', url: '/categories', position: 1 },
+      { label: 'Shop', url: '/products', position: 2 },
+      { label: 'About', url: '/about', position: 3 },
+      { label: 'Contact', url: '/contact', position: 4 },
+    ]);
+    console.log('✅ Nav menu seeded');
+  }
+
+  const footerColCount = await FooterColumn.countDocuments();
+  if (footerColCount === 0) {
+    const shop = await FooterColumn.create({ title: 'Shop', position: 0 });
+    const support = await FooterColumn.create({ title: 'Support', position: 1 });
+    const company = await FooterColumn.create({ title: 'Company', position: 2 });
+
+    await FooterLink.create([
+      { columnId: shop._id, label: 'All Products', url: '/products', position: 0 },
+      { columnId: shop._id, label: 'Categories', url: '/categories', position: 1 },
+      { columnId: shop._id, label: 'Wishlist', url: '/wishlist', position: 2 },
+      { columnId: support._id, label: 'Help Center', url: '/help', position: 0 },
+      { columnId: support._id, label: 'Contact Us', url: '/contact', position: 1 },
+      { columnId: support._id, label: 'Track Order', url: '/orders', position: 2 },
+      { columnId: company._id, label: 'About Us', url: '/about', position: 0 },
+      { columnId: company._id, label: 'Privacy Policy', url: '/privacy', position: 1 },
+      { columnId: company._id, label: 'Terms of Service', url: '/terms', position: 2 },
+    ]);
+
+    if (!(await Setting.findById('footer_description'))) {
+      await Setting.create({ _id: 'footer_description', value: "Premium products, thoughtfully curated. Fast delivery, easy returns, and a shopping experience you'll love." });
+    }
+    if (!(await Setting.findById('footer_copyright'))) {
+      await Setting.create({ _id: 'footer_copyright', value: `© ${new Date().getFullYear()} Dostivox. All rights reserved.` });
+    }
+    console.log('✅ Footer seeded');
+  }
 }
 
 seed().catch((err) => console.error('Seeding failed:', err));
@@ -392,4 +485,5 @@ seed().catch((err) => console.error('Seeding failed:', err));
 module.exports = {
   User, Address, Category, Product, Review, Wishlist, CartItem,
   Coupon, Order, Banner, Advertisement, Notification, Setting, Otp, HeroSlide, Article, TrustCard,
+  NavItem, FooterColumn, FooterLink, HomeSection,
 };
