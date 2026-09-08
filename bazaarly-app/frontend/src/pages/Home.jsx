@@ -26,6 +26,7 @@ export default function Homepage() {
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [trustCards, setTrustCards] = useState([]);
+  const [homeSections, setHomeSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeDot, setActiveDot] = useState(0);
   const [toast, setToast] = useState("");
@@ -39,12 +40,14 @@ export default function Homepage() {
       Api.categories().catch(() => ({ categories: [] })),
       Api.products({ limit: 16, sort: "popular" }).catch(() => ({ products: [] })),
       Api.trustCards().catch(() => ({ cards: [] })),
-    ]).then(([slideRes, catRes, prodRes, trustRes]) => {
+      Api.homeSections().catch(() => ({ sections: [] })),
+    ]).then(([slideRes, catRes, prodRes, trustRes, sectionRes]) => {
       if (!mounted) return;
       setSlides(slideRes.slides || []);
       setCategories((catRes.categories || []).filter((c) => c.is_active !== false && c.is_active !== 0));
       setProducts(prodRes.products || []);
       setTrustCards(trustRes.cards || []);
+      setHomeSections(sectionRes.sections || []);
       setLoading(false);
     });
     return () => { mounted = false; };
@@ -103,6 +106,12 @@ export default function Homepage() {
 
   const trending = products.slice(0, 8);
 
+  // section config from /admin/home-sections (title, subtitle, button, order) — falls back to defaults if not yet set
+  const sec = (key, fallbackTitle) => homeSections.find((s) => s.key === key) || { title: fallbackTitle, subtitle: '', buttonText: '', buttonLink: '' };
+  const sectionOrder = homeSections.length
+    ? [...homeSections].sort((a, b) => a.position - b.position).map((s) => s.key)
+    : ['categories', 'trending', 'deals', 'trust_cards'];
+
   if (loading) {
     return <div className="dv-loading">Loading Dostivox…</div>;
   }
@@ -152,101 +161,129 @@ export default function Homepage() {
         </div>
       )}
 
-      {/* SHOP BY CATEGORY — admin-editable via /admin/categories */}
-      {categories.length > 0 && (
-        <div className="dv-section">
-          <div className="dv-sec-head"><h2>Shop by Category</h2></div>
-          <div className="dv-cat-grid">
-            {categories.map((c) => (
-              <div className="dv-cat-item" key={c.id} onClick={() => goToCategory(c)}>
-                <div className="dv-cat-img">
-                  {c.image ? <img src={c.image} alt={c.name} /> : "🛍"}
-                </div>
-                <span>{c.name}</span>
+      {/* SECTIONS BELOW HERO — order, titles, subtitles and buttons controlled from
+          Admin → Homepage Sections. Each block still only shows if there's data. */}
+      {sectionOrder.map((key) => {
+        if (key === 'categories' && categories.length > 0) {
+          const s = sec('categories', 'Shop by Category');
+          return (
+            <div className="dv-section" key="categories">
+              <div className="dv-sec-head">
+                <h2>{s.title || 'Shop by Category'}</h2>
+                {s.subtitle && <p className="dv-sec-sub">{s.subtitle}</p>}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* TRENDING PRODUCTS — admin-editable via /admin/products */}
-      <div className="dv-section" id="dv-trending">
-        <div className="dv-sec-head">
-          <h2>Trending Products</h2>
-          <a className="dv-view-all" onClick={() => navigate("/products")}>View All ›</a>
-        </div>
-        <div className="dv-prod-grid">
-          {trending.map((p) => (
-            <div className="dv-card" key={p.id}>
-              <button className="dv-wish" onClick={() => addToWishlist(p)}>♡</button>
-              <div className="dv-img-box" onClick={() => goToProduct(p)}>
-                {p.thumbnail ? <img src={p.thumbnail} alt={p.title} /> : "📦"}
+              <div className="dv-cat-grid">
+                {categories.map((c) => (
+                  <div className="dv-cat-item" key={c.id} onClick={() => goToCategory(c)}>
+                    <div className="dv-cat-img">
+                      {c.image ? <img src={c.image} alt={c.name} /> : "🛍"}
+                    </div>
+                    <span>{c.name}</span>
+                  </div>
+                ))}
               </div>
-              <h4 onClick={() => goToProduct(p)}>{p.title}</h4>
-              {p.rating != null && (
-                <div className="dv-stars">★ {p.rating} <span>({(p.rating_count || 0).toLocaleString("en-IN")})</span></div>
-              )}
-              <div className="dv-price">
-                <span className="now">{money(p.price)}</span>
-                {p.mrp > p.price && <span className="old">{money(p.mrp)}</span>}
-              </div>
-              {offPercent(p.price, p.mrp) && <div className="dv-off-tag">{offPercent(p.price, p.mrp)}</div>}
-              <button
-                className={"dv-add-cart" + (addedId === p.id ? " added" : "")}
-                onClick={() => addToCart(p)}
-              >
-                {addedId === p.id ? "✓ Added" : "🛒 Add to Cart"}
-              </button>
             </div>
-          ))}
-          {trending.length === 0 && <p style={{ color: "#6b7280", fontSize: 14 }}>No products yet — add some from the admin panel.</p>}
-        </div>
-      </div>
+          );
+        }
 
-      {/* TODAY'S DEALS */}
-      {deals.length > 0 && (
-        <div className="dv-section">
-          <div className="dv-sec-head">
-            <h2>Today's Deals</h2>
-            <a className="dv-view-all" onClick={() => navigate("/products?sort=price_asc")}>View All ›</a>
-          </div>
-          <div className="dv-deal-grid">
-            {deals.map((d, i) => (
-              <div className={"dv-deal-card deal" + ((i % 4) + 1)} key={d.id}>
-                <div className="dv-img-box" onClick={() => goToProduct(d)}>
-                  {d.thumbnail ? <img src={d.thumbnail} alt={d.title} /> : "📦"}
+        if (key === 'trending') {
+          const s = sec('trending', 'Trending Products');
+          return (
+            <div className="dv-section" id="dv-trending" key="trending">
+              <div className="dv-sec-head">
+                <div>
+                  <h2>{s.title || 'Trending Products'}</h2>
+                  {s.subtitle && <p className="dv-sec-sub">{s.subtitle}</p>}
                 </div>
-                <div className="dv-sub">{d.brand}</div>
-                <h4 onClick={() => goToProduct(d)}>{d.title}</h4>
-                <div className="dv-price">
-                  <span className="now">{money(d.price)}</span>
-                  <span className="old">{money(d.mrp)}</span>
-                </div>
-                <div className="dv-off-tag">{offPercent(d.price, d.mrp)}</div>
-                <button className={"dv-deal-btn deal-btn" + ((i % 4) + 1)} onClick={() => addToCart(d)}>
-                  🛒 Add to Cart
-                </button>
+                <a className="dv-view-all" onClick={() => navigate(s.buttonLink || "/products")}>{s.buttonText || 'View All ›'}</a>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+              <div className="dv-prod-grid">
+                {trending.map((p) => (
+                  <div className="dv-card" key={p.id}>
+                    <button className="dv-wish" onClick={() => addToWishlist(p)}>♡</button>
+                    <div className="dv-img-box" onClick={() => goToProduct(p)}>
+                      {p.thumbnail ? <img src={p.thumbnail} alt={p.title} /> : "📦"}
+                    </div>
+                    <h4 onClick={() => goToProduct(p)}>{p.title}</h4>
+                    {p.rating != null && (
+                      <div className="dv-stars">★ {p.rating} <span>({(p.rating_count || 0).toLocaleString("en-IN")})</span></div>
+                    )}
+                    <div className="dv-price">
+                      <span className="now">{money(p.price)}</span>
+                      {p.mrp > p.price && <span className="old">{money(p.mrp)}</span>}
+                    </div>
+                    {offPercent(p.price, p.mrp) && <div className="dv-off-tag">{offPercent(p.price, p.mrp)}</div>}
+                    <button
+                      className={"dv-add-cart" + (addedId === p.id ? " added" : "")}
+                      onClick={() => addToCart(p)}
+                    >
+                      {addedId === p.id ? "✓ Added" : "🛒 Add to Cart"}
+                    </button>
+                  </div>
+                ))}
+                {trending.length === 0 && <p style={{ color: "#6b7280", fontSize: 14 }}>No products yet — add some from the admin panel.</p>}
+              </div>
+            </div>
+          );
+        }
 
-      {/* WHY CHOOSE - admin-driven, from /api/trust-cards */}
-      {trustCards.length > 0 && (
-        <div className="dv-section">
-          <div className="dv-sec-head"><h2>Why Choose Dostivox?</h2></div>
-          <div className="dv-why-grid">
-            {trustCards.map((c) => (
-              <div className="dv-why-card" key={c.id}>
-                <div className="dv-wi" style={{ background: "#f3f4f6", color: "#111827" }}>{c.icon}</div>
-                <h4>{c.title}</h4>
-                <p>{c.description}</p>
+        if (key === 'deals' && deals.length > 0) {
+          const s = sec('deals', "Today's Deals");
+          return (
+            <div className="dv-section" key="deals">
+              <div className="dv-sec-head">
+                <div>
+                  <h2>{s.title || "Today's Deals"}</h2>
+                  {s.subtitle && <p className="dv-sec-sub">{s.subtitle}</p>}
+                </div>
+                <a className="dv-view-all" onClick={() => navigate(s.buttonLink || "/products?sort=price_asc")}>{s.buttonText || 'View All ›'}</a>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+              <div className="dv-deal-grid">
+                {deals.map((d, i) => (
+                  <div className={"dv-deal-card deal" + ((i % 4) + 1)} key={d.id}>
+                    <div className="dv-img-box" onClick={() => goToProduct(d)}>
+                      {d.thumbnail ? <img src={d.thumbnail} alt={d.title} /> : "📦"}
+                    </div>
+                    <div className="dv-sub">{d.brand}</div>
+                    <h4 onClick={() => goToProduct(d)}>{d.title}</h4>
+                    <div className="dv-price">
+                      <span className="now">{money(d.price)}</span>
+                      <span className="old">{money(d.mrp)}</span>
+                    </div>
+                    <div className="dv-off-tag">{offPercent(d.price, d.mrp)}</div>
+                    <button className={"dv-deal-btn deal-btn" + ((i % 4) + 1)} onClick={() => addToCart(d)}>
+                      🛒 Add to Cart
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        if (key === 'trust_cards' && trustCards.length > 0) {
+          const s = sec('trust_cards', 'Why Choose Dostivox?');
+          return (
+            <div className="dv-section" key="trust_cards">
+              <div className="dv-sec-head">
+                <h2>{s.title || 'Why Choose Dostivox?'}</h2>
+                {s.subtitle && <p className="dv-sec-sub">{s.subtitle}</p>}
+              </div>
+              <div className="dv-why-grid">
+                {trustCards.map((c) => (
+                  <div className="dv-why-card" key={c.id}>
+                    <div className="dv-wi" style={{ background: "#f3f4f6", color: "#111827" }}>{c.icon}</div>
+                    <h4>{c.title}</h4>
+                    <p>{c.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        return null;
+      })}
 
       {toast && (
         <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#111827", color: "#fff", padding: "10px 20px", borderRadius: 9999 }}>
