@@ -40,6 +40,7 @@ import AdminAdvertisements from './pages/admin/AdminAdvertisements';
 import AdminReports from './pages/admin/AdminReports';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
 import AdminSettings from './pages/admin/AdminSettings';
+import AdminTrustCards from './pages/admin/AdminTrustCards';
 
 export default function App() {
   return (
@@ -60,6 +61,7 @@ export default function App() {
         <Route path="reports" element={<AdminReports />} />
         <Route path="analytics" element={<AdminAnalytics />} />
         <Route path="settings" element={<AdminSettings />} />
+        <Route path="trust-cards" element={<AdminTrustCards />} />
       </Route>
 
       {/* Public / customer-facing routes */}
