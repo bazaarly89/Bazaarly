@@ -22,7 +22,8 @@ export function RequireAuth({ children }) {
 }
 
 export function RequireAdmin({ children }) {
-  const { admin } = useAuth();
+  const { admin, loading } = useAuth();
+  if (loading) return null;
   if (!admin) return <Navigate to="/admin/login" replace />;
   return children;
 }
