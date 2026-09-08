@@ -72,7 +72,7 @@ export default function AdminBanners() {
   };
 
   const toggleActive = async (b) => {
-    await AdminApi.updateBanner(b.id, { isActive: b.is_active ? false : true });
+    await AdminApi.updateBanner(b.id, { isActive: b.isActive ? false : true });
     load();
   };
 
@@ -110,19 +110,19 @@ export default function AdminBanners() {
 
       <div className="space-y-4">
         {banners.map((b) => (
-          <div key={b.id} className={`card flex items-center gap-4 p-4 ${!b.is_active ? 'opacity-50' : ''}`}>
+          <div key={b.id} className={`card flex items-center gap-4 p-4 ${!b.isActive ? 'opacity-50' : ''}`}>
             <img src={b.image} alt={b.title} className="h-20 w-32 rounded-lg object-cover" />
             <div className="flex-1">
               <p className="font-semibold">{b.title}</p>
               <p className="text-sm text-slate-500">Links to {b.link || '—'} · Position {b.position}</p>
-              <span className={`text-xs font-semibold ${b.is_active ? 'text-green-600' : 'text-slate-400'}`}>
-                {b.is_active ? 'Visible on homepage' : 'Hidden'}
+              <span className={`text-xs font-semibold ${b.isActive ? 'text-green-600' : 'text-slate-400'}`}>
+                {b.isActive ? 'Visible on homepage' : 'Hidden'}
               </span>
             </div>
             <div className="space-x-3 text-sm">
               <button onClick={() => startEdit(b)} className="text-brand-600 hover:underline">Edit</button>
               <button onClick={() => toggleActive(b)} className="text-slate-500 hover:underline">
-                {b.is_active ? 'Hide' : 'Show'}
+                {b.isActive ? 'Hide' : 'Show'}
               </button>
               <button onClick={() => remove(b.id)} className="text-red-500 hover:underline">Delete</button>
             </div>
