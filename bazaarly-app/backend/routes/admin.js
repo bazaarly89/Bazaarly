@@ -1,10 +1,42 @@
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const { v4: uuid } = require('uuid');
-const { Product, Category, Order, User, Coupon, Banner, Advertisement, Notification, Setting, HeroSlide, TrustCard } = require('../db');
+const { Product, Category, Order, User, Coupon, Banner, Advertisement, Notification, Setting, HeroSlide, TrustCard, NavItem, FooterColumn, FooterLink, HomeSection } = require('../db');
 const { adminRequired } = require('../middleware/auth');
 const router = express.Router();
 
 router.use(adminRequired);
+
+// ---------------- CHANGE ADMIN PASSWORD (also lets admin update their email) ----------------
+router.put('/change-password', async (req, res) => {
+  const { currentPassword, newPassword, newEmail } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Current password and new password are required' });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'New password must be at least 6 characters' });
+  }
+
+  const admin = await User.findById(req.admin.id);
+  if (!admin || admin.role !== 'admin') {
+    return res.status(404).json({ error: 'Admin account not found' });
+  }
+
+  if (!bcrypt.compareSync(currentPassword, admin.password)) {
+    return res.status(401).json({ error: 'Current password is incorrect' });
+  }
+
+  admin.password = bcrypt.hashSync(newPassword, 10);
+  if (newEmail && newEmail !== admin.email) {
+    const existing = await User.findOne({ email: newEmail });
+    if (existing) return res.status(400).json({ error: 'That email is already in use' });
+    admin.email = newEmail;
+  }
+  await admin.save();
+
+  res.json({ message: 'Password updated successfully', email: admin.email });
+});
 
 // ---------------- DASHBOARD ----------------
 router.get('/dashboard', async (req, res) => {
@@ -447,6 +479,118 @@ router.put('/trust-cards/:id', async (req, res) => {
 router.delete('/trust-cards/:id', async (req, res) => {
   await TrustCard.findByIdAndDelete(req.params.id);
   res.json({ message: 'Trust card deleted' });
+});
+
+// ---------------- NAVIGATION MENU ----------------
+router.get('/nav-items', async (req, res) => {
+  const items = await NavItem.find().sort({ position: 1 }).lean();
+  res.json({ items: items.map((i) => ({ ...i, id: i._id })) });
+});
+
+router.post('/nav-items', async (req, res) => {
+  const { label, url, icon, isExternal, isVisible, position, parentId } = req.body;
+  if (!label || !url) return res.status(400).json({ error: 'Label and URL are required' });
+  const item = await NavItem.create({
+    label, url, icon: icon || '', isExternal: !!isExternal,
+    isVisible: isVisible !== false, position: position || 0, parentId: parentId || null,
+  });
+  res.status(201).json({ item: { ...item.toObject(), id: item._id } });
+});
+
+router.put('/nav-items/:id', async (req, res) => {
+  const update = { ...req.body };
+  delete update._id;
+  const item = await NavItem.findByIdAndUpdate(req.params.id, update, { new: true });
+  if (!item) return res.status(404).json({ error: 'Nav item not found' });
+  res.json({ item: { ...item.toObject(), id: item._id } });
+});
+
+router.delete('/nav-items/:id', async (req, res) => {
+  await NavItem.findByIdAndDelete(req.params.id);
+  res.json({ message: 'Nav item deleted' });
+});
+
+// ---------------- FOOTER MANAGEMENT ----------------
+router.get('/footer-columns', async (req, res) => {
+  const columns = await FooterColumn.find().sort({ position: 1 }).lean();
+  const links = await FooterLink.find().sort({ position: 1 }).lean();
+  res.json({
+    columns: columns.map((c) => ({
+      ...c,
+      id: c._id,
+      links: links.filter((l) => l.columnId === c._id).map((l) => ({ ...l, id: l._id })),
+    })),
+  });
+});
+
+router.post('/footer-columns', async (req, res) => {
+  const { title, position } = req.body;
+  if (!title) return res.status(400).json({ error: 'Title is required' });
+  const col = await FooterColumn.create({ title, position: position || 0 });
+  res.status(201).json({ column: { ...col.toObject(), id: col._id } });
+});
+
+router.put('/footer-columns/:id', async (req, res) => {
+  const update = { ...req.body };
+  delete update._id;
+  const col = await FooterColumn.findByIdAndUpdate(req.params.id, update, { new: true });
+  if (!col) return res.status(404).json({ error: 'Footer column not found' });
+  res.json({ column: { ...col.toObject(), id: col._id } });
+});
+
+router.delete('/footer-columns/:id', async (req, res) => {
+  await FooterColumn.findByIdAndDelete(req.params.id);
+  await FooterLink.deleteMany({ columnId: req.params.id });
+  res.json({ message: 'Footer column deleted' });
+});
+
+router.post('/footer-links', async (req, res) => {
+  const { columnId, label, url, position } = req.body;
+  if (!columnId || !label || !url) return res.status(400).json({ error: 'Column, label and URL are required' });
+  const link = await FooterLink.create({ columnId, label, url, position: position || 0 });
+  res.status(201).json({ link: { ...link.toObject(), id: link._id } });
+});
+
+router.put('/footer-links/:id', async (req, res) => {
+  const update = { ...req.body };
+  delete update._id;
+  const link = await FooterLink.findByIdAndUpdate(req.params.id, update, { new: true });
+  if (!link) return res.status(404).json({ error: 'Footer link not found' });
+  res.json({ link: { ...link.toObject(), id: link._id } });
+});
+
+router.delete('/footer-links/:id', async (req, res) => {
+  await FooterLink.findByIdAndDelete(req.params.id);
+  res.json({ message: 'Footer link deleted' });
+});
+
+// ---------------- HOMEPAGE SECTIONS (title/subtitle/enable/reorder) ----------------
+router.get('/home-sections', async (req, res) => {
+  const sections = await HomeSection.find().sort({ position: 1 }).lean();
+  res.json({ sections: sections.map((s) => ({ ...s, id: s._id })) });
+});
+
+router.put('/home-sections/:id', async (req, res) => {
+  const { title, subtitle, buttonText, buttonLink, isEnabled, position } = req.body;
+  const update = {};
+  if (title !== undefined) update.title = title;
+  if (subtitle !== undefined) update.subtitle = subtitle;
+  if (buttonText !== undefined) update.buttonText = buttonText;
+  if (buttonLink !== undefined) update.buttonLink = buttonLink;
+  if (isEnabled !== undefined) update.isEnabled = isEnabled;
+  if (position !== undefined) update.position = position;
+  const section = await HomeSection.findByIdAndUpdate(req.params.id, update, { new: true });
+  if (!section) return res.status(404).json({ error: 'Section not found' });
+  res.json({ section: { ...section.toObject(), id: section._id } });
+});
+
+// Reorder helper: accepts [{id, position}, ...] and updates all at once
+router.put('/home-sections-reorder', async (req, res) => {
+  const { order } = req.body; // [{ id, position }]
+  if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be an array' });
+  await Promise.all(order.map((o) => HomeSection.findByIdAndUpdate(o.id, { position: o.position })));
+  const sections = await HomeSection.find().sort({ position: 1 }).lean();
+  res.json({ sections: sections.map((s) => ({ ...s, id: s._id })) });
 });
 
 module.exports = router;
