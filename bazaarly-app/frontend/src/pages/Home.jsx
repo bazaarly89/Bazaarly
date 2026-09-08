@@ -25,6 +25,7 @@ export default function Homepage() {
   const [slides, setSlides] = useState([]);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
+  const [trustCards, setTrustCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeDot, setActiveDot] = useState(0);
   const [toast, setToast] = useState("");
@@ -37,11 +38,13 @@ export default function Homepage() {
       Api.heroSlides().catch(() => ({ slides: [] })),
       Api.categories().catch(() => ({ categories: [] })),
       Api.products({ limit: 16, sort: "popular" }).catch(() => ({ products: [] })),
-    ]).then(([slideRes, catRes, prodRes]) => {
+      Api.trustCards().catch(() => ({ cards: [] })),
+    ]).then(([slideRes, catRes, prodRes, trustRes]) => {
       if (!mounted) return;
       setSlides(slideRes.slides || []);
       setCategories((catRes.categories || []).filter((c) => c.is_active !== false && c.is_active !== 0));
       setProducts(prodRes.products || []);
+      setTrustCards(trustRes.cards || []);
       setLoading(false);
     });
     return () => { mounted = false; };
@@ -229,16 +232,21 @@ export default function Homepage() {
         </div>
       )}
 
-      {/* WHY CHOOSE - static, not admin-driven (nothing in backend tracks this) */}
-      <div className="dv-section">
-        <div className="dv-sec-head"><h2>Why Choose Dostivox?</h2></div>
-        <div className="dv-why-grid">
-          <div className="dv-why-card"><div className="dv-wi" style={{ background: "#fee2e2", color: "#ef4444" }}>%</div><h4>Best Prices</h4><p>Guaranteed</p></div>
-          <div className="dv-why-card"><div className="dv-wi" style={{ background: "#dcfce7", color: "#16a34a" }}>✓</div><h4>Genuine Products</h4><p>100% Original</p></div>
-          <div className="dv-why-card"><div className="dv-wi" style={{ background: "#dcfce7", color: "#16a34a" }}>🚚</div><h4>Fast Delivery</h4><p>Across India</p></div>
-          <div className="dv-why-card"><div className="dv-wi" style={{ background: "#dbeafe", color: "#2563eb" }}>🎧</div><h4>24/7 Customer Support</h4><p>We're here to help</p></div>
+      {/* WHY CHOOSE - admin-driven, from /api/trust-cards */}
+      {trustCards.length > 0 && (
+        <div className="dv-section">
+          <div className="dv-sec-head"><h2>Why Choose Dostivox?</h2></div>
+          <div className="dv-why-grid">
+            {trustCards.map((c) => (
+              <div className="dv-why-card" key={c.id}>
+                <div className="dv-wi" style={{ background: "#f3f4f6", color: "#111827" }}>{c.icon}</div>
+                <h4>{c.title}</h4>
+                <p>{c.description}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {toast && (
         <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#111827", color: "#fff", padding: "10px 20px", borderRadius: 9999 }}>
