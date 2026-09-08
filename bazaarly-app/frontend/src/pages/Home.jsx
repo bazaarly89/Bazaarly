@@ -23,6 +23,7 @@ const offPercent = (price, mrp) => {
 export default function Homepage() {
   const navigate = useNavigate();
   const [slides, setSlides] = useState([]);
+  const [banners, setBanners] = useState([]);
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [trustCards, setTrustCards] = useState([]);
@@ -37,13 +38,15 @@ export default function Homepage() {
     let mounted = true;
     Promise.all([
       Api.heroSlides().catch(() => ({ slides: [] })),
+      Api.banners().catch(() => ({ banners: [] })),
       Api.categories().catch(() => ({ categories: [] })),
       Api.products({ limit: 16, sort: "popular" }).catch(() => ({ products: [] })),
       Api.trustCards().catch(() => ({ cards: [] })),
       Api.homeSections().catch(() => ({ sections: [] })),
-    ]).then(([slideRes, catRes, prodRes, trustRes, sectionRes]) => {
+    ]).then(([slideRes, bannerRes, catRes, prodRes, trustRes, sectionRes]) => {
       if (!mounted) return;
       setSlides(slideRes.slides || []);
+      setBanners(bannerRes.banners || []);
       setCategories((catRes.categories || []).filter((c) => c.is_active !== false && c.is_active !== 0));
       setProducts(prodRes.products || []);
       setTrustCards(trustRes.cards || []);
@@ -158,6 +161,24 @@ export default function Homepage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* PROMO BANNERS — admin-editable via /admin/banners (separate from the
+          hero slideshow above, which comes from /admin/hero-slides). Shows
+          nothing if no banners are marked visible. */}
+      {banners.length > 0 && (
+        <div className="dv-promo-wrap">
+          {banners.map((b) => (
+            <div
+              key={b.id}
+              className="dv-promo-item"
+              onClick={() => b.link && navigate(b.link)}
+              style={{ cursor: b.link ? "pointer" : "default" }}
+            >
+              <img src={b.image} alt={b.title || "Offer"} />
+            </div>
+          ))}
         </div>
       )}
 
