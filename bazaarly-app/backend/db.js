@@ -240,6 +240,16 @@ const heroSlideSchema = new mongoose.Schema({
   imageFit: { type: String, default: 'cover' },
 });
 
+// ---------------- TRUST CARDS (the "Why Choose Dostivox?" section) ----------------
+const trustCardSchema = new mongoose.Schema({
+  _id: { type: String, default: uuid },
+  icon: { type: String, default: '%' }, // any short text/emoji shown as the icon
+  title: { type: String, required: true },
+  description: { type: String, default: '' },
+  position: { type: Number, default: 0 },
+  isActive: { type: Boolean, default: true },
+});
+
 // ---------------- NEW: BUYING GUIDES / ARTICLES ----------------
 const articleSchema = new mongoose.Schema({
   _id: { type: String, default: uuid },
@@ -278,6 +288,7 @@ const Setting = mongoose.model('Setting', settingSchema);
 const Otp = mongoose.model('Otp', otpSchema);
 const HeroSlide = mongoose.model('HeroSlide', heroSlideSchema);
 const Article = mongoose.model('Article', articleSchema);
+const TrustCard = mongoose.model('TrustCard', trustCardSchema);
 
 // ---------------- SEED DEMO DATA (only if database is empty) ----------------
 
@@ -364,12 +375,21 @@ async function seed() {
     });
     console.log('✅ Hero slides seeded');
   }
+  const trustCardCount = await TrustCard.countDocuments();
+  if (trustCardCount === 0) {
+    await TrustCard.create([
+      { icon: '%', title: 'Best Prices', description: 'Guaranteed', position: 0 },
+      { icon: '✓', title: 'Genuine Products', description: '100% Original', position: 1 },
+      { icon: '🚚', title: 'Fast Delivery', description: 'Across India', position: 2 },
+      { icon: '🎧', title: '24/7 Customer Support', description: "We're here to help", position: 3 },
+    ]);
+    console.log('✅ Trust cards seeded');
+  }
 }
 
 seed().catch((err) => console.error('Seeding failed:', err));
 
 module.exports = {
   User, Address, Category, Product, Review, Wishlist, CartItem,
-  Coupon, Order, Banner, Advertisement, Notification, Setting, Otp, HeroSlide, Article,
+  Coupon, Order, Banner, Advertisement, Notification, Setting, Otp, HeroSlide, Article, TrustCard,
 };
-           
