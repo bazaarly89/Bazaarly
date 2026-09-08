@@ -23,7 +23,7 @@ export default function AdminCoupons() {
     load();
   };
 
-  const toggleActive = async (c) => { await AdminApi.updateCoupon(c.id, { isActive: c.is_active ? 0 : 1 }); load(); };
+  const toggleActive = async (c) => { await AdminApi.updateCoupon(c.id, { isActive: c.isActive ? 0 : 1 }); load(); };
   const remove = async (id) => { if (!confirm('Delete this coupon?')) return; await AdminApi.deleteCoupon(id); load(); };
 
   return (
@@ -52,9 +52,9 @@ export default function AdminCoupons() {
                 <td className="capitalize">{c.type}</td>
                 <td>{c.type === 'percent' ? `${c.value}%` : `₹${c.value}`}</td>
                 <td>{c.used_count}{c.usage_limit ? ` / ${c.usage_limit}` : ''}</td>
-                <td>{c.is_active ? 'Active' : 'Inactive'}</td>
+                <td>{c.isActive ? 'Active' : 'Inactive'}</td>
                 <td className="space-x-3 text-right">
-                  <button onClick={() => toggleActive(c)} className="text-brand-600 hover:underline">{c.is_active ? 'Disable' : 'Enable'}</button>
+                  <button onClick={() => toggleActive(c)} className="text-brand-600 hover:underline">{c.isActive ? 'Disable' : 'Enable'}</button>
                   <button onClick={() => remove(c.id)} className="text-red-500 hover:underline">Delete</button>
                 </td>
               </tr>
