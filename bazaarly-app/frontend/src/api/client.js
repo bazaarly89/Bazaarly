@@ -48,6 +48,8 @@ export const Api = {
 siteContent: () => unwrap(api.get('/content')),
   // homepage hero slideshow (public, read-only)
   heroSlides: () => unwrap(api.get('/hero-slides')),
+  // homepage "Why Choose Dostivox?" cards (public, read-only)
+  trustCards: () => unwrap(api.get('/trust-cards')),
 
   // cart
   getCart: () => unwrap(api.get('/cart')),
@@ -127,6 +129,11 @@ export const AdminApi = {
   createHeroSlide: (data) => unwrap(adminApi.post('/admin/hero-slides', data)),
   updateHeroSlide: (id, data) => unwrap(adminApi.put(`/admin/hero-slides/${id}`, data)),
   deleteHeroSlide: (id) => unwrap(adminApi.delete(`/admin/hero-slides/${id}`)),
+
+  trustCards: () => unwrap(adminApi.get('/admin/trust-cards')),
+  createTrustCard: (data) => unwrap(adminApi.post('/admin/trust-cards', data)),
+  updateTrustCard: (id, data) => unwrap(adminApi.put(`/admin/trust-cards/${id}`, data)),
+  deleteTrustCard: (id) => unwrap(adminApi.delete(`/admin/trust-cards/${id}`)),
 
   salesReport: (params) => unwrap(adminApi.get('/admin/reports/sales', { params })),
   topProducts: () => unwrap(adminApi.get('/admin/reports/top-products')),
