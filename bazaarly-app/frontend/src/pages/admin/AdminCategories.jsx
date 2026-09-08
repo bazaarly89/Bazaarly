@@ -70,7 +70,7 @@ export default function AdminCategories() {
   };
 
   const toggleActive = async (c) => {
-    await AdminApi.updateCategory(c.id, { isActive: c.is_active ? false : true });
+    await AdminApi.updateCategory(c.id, { isActive: c.isActive ? false : true });
     load();
   };
 
@@ -104,13 +104,13 @@ export default function AdminCategories() {
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {categories.map((c) => (
-          <div key={c.id} className={`card overflow-hidden ${!c.is_active ? 'opacity-50' : ''}`}>
+          <div key={c.id} className={`card overflow-hidden ${!c.isActive ? 'opacity-50' : ''}`}>
             <img src={c.image} alt={c.name} className="aspect-video w-full object-cover" />
             <div className="p-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold">{c.name}</p>
-                <span className={`text-xs font-semibold ${c.is_active ? 'text-green-600' : 'text-slate-400'}`}>
-                  {c.is_active ? 'Visible' : 'Hidden'}
+                <span className={`text-xs font-semibold ${c.isActive ? 'text-green-600' : 'text-slate-400'}`}>
+                  {c.isActive ? 'Visible' : 'Hidden'}
                 </span>
               </div>
               <div className="mt-2 flex items-center justify-between text-xs">
@@ -119,7 +119,7 @@ export default function AdminCategories() {
                   <button onClick={() => remove(c.id)} className="text-red-500 hover:underline">Delete</button>
                 </div>
                 <button onClick={() => toggleActive(c)} className="text-slate-500 hover:underline">
-                  {c.is_active ? 'Hide from customers' : 'Show to customers'}
+                  {c.isActive ? 'Hide from customers' : 'Show to customers'}
                 </button>
               </div>
             </div>
