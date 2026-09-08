@@ -23,7 +23,7 @@
    whenever a slide had more text than that fixed box could fit (that's the
    "Best Quality • Best Prices • 100% Trust" line getting cut off in the
    screenshot). Banner now grows with its content instead of clipping it. */
-.dv-banner-wrap{max-width:130px;margin:10px auto;padding:0 10px;}
+.dv-banner-wrap{max-width:1300px;margin:20px auto;padding:0 20px;}
 .dv-banner{
   position:relative;
   background-color:#eff6ff; /* fallback while bg image loads */
@@ -32,8 +32,8 @@
   display:flex;
   align-items:center;
   justify-content:flex-start;
-  min-height:120px;
-  padding:28px 12px;
+  min-height:220px;
+  padding:28px 32px;
 }
 .dv-banner-text{
   max-width:460px;
