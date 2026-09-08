@@ -1,6 +1,6 @@
 const express = require('express');
 const { v4: uuid } = require('uuid');
-const { Product, Category, Order, User, Coupon, Banner, Advertisement, Notification, Setting, HeroSlide } = require('../db');
+const { Product, Category, Order, User, Coupon, Banner, Advertisement, Notification, Setting, HeroSlide, TrustCard } = require('../db');
 const { adminRequired } = require('../middleware/auth');
 const router = express.Router();
 
@@ -423,5 +423,30 @@ router.delete('/hero-slides/:id', async (req, res) => {
   res.json({ message: 'Slide deleted' });
 });
 
+// ---------------- TRUST CARDS ("Why Choose Dostivox?" section) ----------------
+router.get('/trust-cards', async (req, res) => {
+  const cards = await TrustCard.find().sort({ position: 1 }).lean();
+  res.json({ cards: cards.map((c) => ({ ...c, id: c._id })) });
+});
+router.post('/trust-cards', async (req, res) => {
+  const { icon, title, description, position } = req.body;
+  const card = await TrustCard.create({ icon: icon || '%', title, description: description || '', position: position || 0 });
+  res.status(201).json({ card: { ...card.toObject(), id: card._id } });
+});
+router.put('/trust-cards/:id', async (req, res) => {
+  const { icon, title, description, position, isActive } = req.body;
+  const update = {};
+  if (icon !== undefined) update.icon = icon;
+  if (title !== undefined) update.title = title;
+  if (description !== undefined) update.description = description;
+  if (position !== undefined) update.position = position;
+  if (isActive !== undefined) update.isActive = isActive;
+  const card = await TrustCard.findByIdAndUpdate(req.params.id, update, { new: true });
+  res.json({ card: { ...card.toObject(), id: card._id } });
+});
+router.delete('/trust-cards/:id', async (req, res) => {
+  await TrustCard.findByIdAndDelete(req.params.id);
+  res.json({ message: 'Trust card deleted' });
+});
+
 module.exports = router;
-  
