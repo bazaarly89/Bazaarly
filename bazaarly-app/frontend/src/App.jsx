@@ -41,6 +41,9 @@ import AdminReports from './pages/admin/AdminReports';
 import AdminAnalytics from './pages/admin/AdminAnalytics';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminTrustCards from './pages/admin/AdminTrustCards';
+import AdminHomeSections from './pages/admin/AdminHomeSections';
+import AdminNavigation from './pages/admin/AdminNavigation';
+import AdminFooter from './pages/admin/AdminFooter';
 
 export default function App() {
   return (
@@ -62,6 +65,9 @@ export default function App() {
         <Route path="analytics" element={<AdminAnalytics />} />
         <Route path="settings" element={<AdminSettings />} />
         <Route path="trust-cards" element={<AdminTrustCards />} />
+        <Route path="home-sections" element={<AdminHomeSections />} />
+        <Route path="navigation" element={<AdminNavigation />} />
+        <Route path="footer" element={<AdminFooter />} />
       </Route>
 
       {/* Public / customer-facing routes */}
