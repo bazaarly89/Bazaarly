@@ -76,7 +76,7 @@ export default function AdminProducts() {
   };
 
   const toggleActive = async (p) => {
-    await AdminApi.updateProduct(p.id, { isActive: p.is_active ? false : true });
+    await AdminApi.updateProduct(p.id, { isActive: p.isActive ? false : true });
     load();
   };
 
@@ -138,11 +138,11 @@ export default function AdminProducts() {
                 <td>{p.category_name}</td>
                 <td>₹{p.price}</td>
                 <td className={p.stock <= 5 ? 'text-red-500 font-semibold' : ''}>{p.stock}</td>
-                <td>{p.is_active ? 'Active' : 'Hidden'}</td>
+                <td>{p.isActive ? 'Active' : 'Hidden'}</td>
                 <td className="space-x-3 text-right">
                   <button onClick={() => startEdit(p)} className="text-brand-600 hover:underline">Edit</button>
                   <button onClick={() => toggleActive(p)} className="text-slate-500 hover:underline">
-                    {p.is_active ? 'Hide' : 'Show'}
+                    {p.isActive ? 'Hide' : 'Show'}
                   </button>
                   <button onClick={() => remove(p.id)} className="text-red-500 hover:underline">Delete</button>
                 </td>
