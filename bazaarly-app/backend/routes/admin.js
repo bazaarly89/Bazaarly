@@ -93,8 +93,10 @@ router.post('/products', async (req, res) => {
     // own-product fields
     price, mrp, stock, sku,
     // affiliate-product fields
-    currentPrice, originalPrice, discountPercentage, merchant, affiliateUrl, ctaText,
+    currentPrice, originalPrice, discountPercentage, merchant, affiliateUrl, regularUrl, ctaText,
     pros = [], cons = [], editorScore, comparisonEnabled,
+    // specifications (shared attributes field)
+    attributes = [],
   } = req.body;
 
   const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString(36);
@@ -103,6 +105,7 @@ router.post('/products', async (req, res) => {
     title, slug, description: description || '', shortDescription: shortDescription || '',
     categoryId, brand: brand || '', productType,
     images: images.map((url, i) => ({ url, position: i })),
+    attributes,
     tags, featured: !!featured, trending: !!trending, deal: !!deal,
   };
 
@@ -119,7 +122,8 @@ router.post('/products', async (req, res) => {
     productData.originalPrice = originalPrice;
     productData.discountPercentage = discountPercentage;
     productData.merchant = merchant || '';
-    productData.affiliateUrl = affiliateUrl;
+    productData.affiliateUrl = affiliateUrl;         // tracking link — set only here, admin panel
+    productData.regularUrl = regularUrl || '';        // optional plain link, no affiliate tag
     productData.ctaText = ctaText || 'Check Deal';
     productData.pros = pros;
     productData.cons = cons;
@@ -136,8 +140,8 @@ router.put('/products/:id', async (req, res) => {
     title, description, shortDescription, categoryId, brand, isActive, images, tags,
     featured, trending, deal, productType,
     price, mrp, stock, sku,
-    currentPrice, originalPrice, discountPercentage, merchant, affiliateUrl, ctaText,
-    pros, cons, editorScore, comparisonEnabled,
+    currentPrice, originalPrice, discountPercentage, merchant, affiliateUrl, regularUrl, ctaText,
+    pros, cons, editorScore, comparisonEnabled, attributes,
   } = req.body;
 
   const update = { updatedAt: new Date() };
@@ -148,6 +152,7 @@ router.put('/products/:id', async (req, res) => {
   if (brand !== undefined) update.brand = brand;
   if (isActive !== undefined) update.isActive = isActive;
   if (Array.isArray(images)) update.images = images.map((url, i) => ({ url, position: i }));
+  if (Array.isArray(attributes)) update.attributes = attributes;
   if (Array.isArray(tags)) update.tags = tags;
   if (featured !== undefined) update.featured = featured;
   if (trending !== undefined) update.trending = trending;
@@ -166,6 +171,7 @@ router.put('/products/:id', async (req, res) => {
   if (discountPercentage !== undefined) update.discountPercentage = discountPercentage;
   if (merchant !== undefined) update.merchant = merchant;
   if (affiliateUrl !== undefined) update.affiliateUrl = affiliateUrl;
+  if (regularUrl !== undefined) update.regularUrl = regularUrl;
   if (ctaText !== undefined) update.ctaText = ctaText;
   if (Array.isArray(pros)) update.pros = pros;
   if (Array.isArray(cons)) update.cons = cons;
