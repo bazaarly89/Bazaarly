@@ -13,10 +13,22 @@ export default function ProductCard({ product }) {
   const [wished, setWished] = useState(false);
   const isAffiliate = product.productType === 'affiliate';
 
-  const displayPrice = isAffiliate ? product.currentPrice : product.price;
-  const displayOriginal = isAffiliate ? product.originalPrice : product.mrp;
+  // A product can have multiple merchant offers (Amazon, Flipkart, etc.) —
+  // show the cheapest one on the card. Falls back to the legacy flat fields
+  // for products saved before multi-offer support existed.
+  const offers = product.offers?.length ? product.offers : (isAffiliate ? [{
+    merchant: product.merchant, merchantLogo: product.merchantLogo,
+    currentPrice: product.currentPrice, originalPrice: product.originalPrice,
+    discountPercentage: product.discountPercentage, affiliateUrl: product.affiliateUrl, ctaText: product.ctaText,
+  }] : []);
+  const bestOffer = isAffiliate
+    ? offers.reduce((best, o) => (!best || (o.currentPrice ?? Infinity) < (best.currentPrice ?? Infinity) ? o : best), null)
+    : null;
+
+  const displayPrice = isAffiliate ? bestOffer?.currentPrice : product.price;
+  const displayOriginal = isAffiliate ? bestOffer?.originalPrice : product.mrp;
   const discount = isAffiliate
-    ? (product.discountPercentage || (displayOriginal ? Math.round(((displayOriginal - displayPrice) / displayOriginal) * 100) : 0))
+    ? (bestOffer?.discountPercentage || (displayOriginal ? Math.round(((displayOriginal - displayPrice) / displayOriginal) * 100) : 0))
     : Math.round(((product.mrp - product.price) / product.mrp) * 100);
 
   const handleAdd = async (e) => {
@@ -28,7 +40,7 @@ export default function ProductCard({ product }) {
 
   const handleCheckDeal = (e) => {
     e.preventDefault();
-    if (product.affiliateUrl) window.open(product.affiliateUrl, '_blank', 'noopener,noreferrer');
+    if (bestOffer?.affiliateUrl) window.open(bestOffer.affiliateUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleWishlist = async (e) => {
@@ -69,7 +81,7 @@ export default function ProductCard({ product }) {
         <div className="absolute inset-x-0 bottom-0 translate-y-full bg-white/95 backdrop-blur px-3 py-2 transition-transform duration-300 group-hover:translate-y-0">
           {isAffiliate ? (
             <button onClick={handleCheckDeal} className="btn-primary w-full text-sm py-2">
-              {product.ctaText || 'Check Deal'}
+              {bestOffer?.ctaText || 'Check Deal'}
             </button>
           ) : (
             <button onClick={handleAdd} disabled={busy} className="btn-primary w-full text-sm py-2">
@@ -81,7 +93,7 @@ export default function ProductCard({ product }) {
       <div className="p-4">
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand-500">{product.brand}</p>
-          {isAffiliate && product.merchant && <MerchantBadge merchant={product.merchant} />}
+          {isAffiliate && bestOffer?.merchant && <MerchantBadge merchant={bestOffer.merchant} logo={bestOffer.merchantLogo} />}
         </div>
         <h3 className="mt-1 line-clamp-2 font-medium text-slate-800">{product.title}</h3>
         {!isAffiliate && (
@@ -94,7 +106,9 @@ export default function ProductCard({ product }) {
           )}
         </div>
         {isAffiliate && (
-          <p className="mt-1 text-[11px] text-slate-400">Affiliate link</p>
+          <p className="mt-1 text-[11px] text-slate-400">
+            {offers.length > 1 ? `Lowest of ${offers.length} stores` : 'Affiliate link'}
+          </p>
         )}
       </div>
     </Link>
