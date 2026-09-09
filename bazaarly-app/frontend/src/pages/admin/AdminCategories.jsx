@@ -26,8 +26,12 @@ export default function AdminCategories() {
   const [editingId, setEditingId] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
-  const load = () => AdminApi.categories().then((r) => setCategories(r.categories));
+  const load = () => AdminApi.categories()
+    .then((r) => { setCategories(r.categories); setLoadError(''); })
+    .catch((err) => setLoadError(err.message || 'Could not load categories'));
   useEffect(() => { load(); }, []);
 
   const startEdit = (c) => {
@@ -55,23 +59,38 @@ export default function AdminCategories() {
 
   const submit = async (e) => {
     e.preventDefault();
-    if (editingId) await AdminApi.updateCategory(editingId, form);
-    else await AdminApi.createCategory(form);
-    setShowForm(false);
-    setForm(emptyForm);
-    setEditingId(null);
-    load();
+    setSaving(true);
+    try {
+      if (editingId) await AdminApi.updateCategory(editingId, form);
+      else await AdminApi.createCategory(form);
+      setShowForm(false);
+      setForm(emptyForm);
+      setEditingId(null);
+      load();
+    } catch (err) {
+      alert('Save failed: ' + (err.message || 'Unknown error'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const remove = async (id) => {
     if (!confirm('Delete this category?')) return;
-    await AdminApi.deleteCategory(id);
-    load();
+    try {
+      await AdminApi.deleteCategory(id);
+      load();
+    } catch (err) {
+      alert('Delete failed: ' + (err.message || 'Unknown error'));
+    }
   };
 
   const toggleActive = async (c) => {
-    await AdminApi.updateCategory(c.id, { isActive: c.isActive ? false : true });
-    load();
+    try {
+      await AdminApi.updateCategory(c.id, { isActive: c.isActive ? false : true });
+      load();
+    } catch (err) {
+      alert('Update failed: ' + (err.message || 'Unknown error'));
+    }
   };
 
   return (
@@ -96,10 +115,16 @@ export default function AdminCategories() {
             )}
           </div>
           <div className="flex gap-3 sm:col-span-2">
-            <button className="btn-primary" disabled={uploading}>{editingId ? 'Update Category' : 'Create Category'}</button>
+            <button className="btn-primary" disabled={saving || uploading}>{saving ? 'Saving…' : (editingId ? 'Update Category' : 'Create Category')}</button>
             <button type="button" onClick={() => { setShowForm(false); setForm(emptyForm); setEditingId(null); }} className="btn-ghost">Cancel</button>
           </div>
         </form>
+      )}
+
+      {loadError && (
+        <div className="mb-4 rounded-xl2 border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          Couldn't load categories: {loadError}. <button onClick={load} className="font-semibold underline">Try again</button>
+        </div>
       )}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
@@ -125,6 +150,9 @@ export default function AdminCategories() {
             </div>
           </div>
         ))}
+        {categories.length === 0 && !loadError && (
+          <p className="col-span-full text-sm text-slate-400">No categories yet — click "+ Add Category" to create your first one.</p>
+        )}
       </div>
     </div>
   );
