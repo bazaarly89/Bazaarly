@@ -48,6 +48,17 @@ const categorySchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
 });
 
+// Reusable merchant directory — admin uploads each merchant's logo once here
+// (e.g. Amazon, Flipkart, Myntra) and picks it on any affiliate product/offer
+// instead of re-uploading every time.
+const merchantSchema = new mongoose.Schema({
+  _id: { type: String, default: uuid },
+  name: { type: String, required: true, unique: true },
+  logo: String, // Cloudinary URL, uploaded by admin — never a bundled/hard-coded asset
+  isActive: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now },
+});
+
 const productImageSchema = new mongoose.Schema({
   url: String,
   position: { type: Number, default: 0 },
@@ -56,6 +67,20 @@ const productImageSchema = new mongoose.Schema({
 const attributeSchema = new mongoose.Schema({
   key: String,
   value: String,
+}, { _id: false });
+
+// One "offer" = one merchant's listing for this product (Amazon, Flipkart, etc).
+// A single affiliate product can carry several offers so the customer can pick
+// whichever store has it cheaper.
+const offerSchema = new mongoose.Schema({
+  merchant: String,               // merchant name, e.g. "Amazon", "Flipkart"
+  merchantLogo: String,           // logo snapshot (from the Merchant directory, or a custom upload)
+  currentPrice: Number,           // price shown on the merchant site
+  originalPrice: Number,          // pre-discount price on the merchant site
+  discountPercentage: Number,
+  affiliateUrl: String,           // outbound affiliate/tracking link — configurable from admin, never hard-coded
+  regularUrl: String,             // optional non-affiliate/plain link to the same listing (fallback/reference)
+  ctaText: { type: String, default: 'Check Deal' },
 }, { _id: false });
 
 // ---------------- PRODUCT (supports OWN products + AFFILIATE products) ----------------
@@ -91,17 +116,23 @@ const productSchema = new mongoose.Schema({
   sku: String,
 
   // Affiliate-product fields (ignored for own products)
-  currentPrice: Number,           // price shown on the merchant site
-  originalPrice: Number,          // pre-discount price on the merchant site
-  discountPercentage: Number,
-  merchant: String,               // e.g. "Amazon", "Flipkart", "Other"
-  affiliateUrl: String,           // outbound affiliate/tracking link — configurable from admin, never hard-coded
-  regularUrl: String,             // optional non-affiliate/plain link to the same listing (fallback/reference)
-  ctaText: { type: String, default: 'Check Deal' },
+  // One product can have MULTIPLE merchant offers (Amazon, Flipkart, etc.) —
+  // the storefront shows all of them so the customer can pick the cheapest.
+  offers: [offerSchema],
   pros: [String],
   cons: [String],
   editorScore: Number,
   comparisonEnabled: { type: Boolean, default: false },
+
+  // Legacy single-offer fields — kept only so older products (created before
+  // multi-offer support) keep working; new saves always go through `offers`.
+  currentPrice: Number,
+  originalPrice: Number,
+  discountPercentage: Number,
+  merchant: String,
+  affiliateUrl: String,
+  regularUrl: String,
+  ctaText: { type: String, default: 'Check Deal' },
 
   // Price tracking (architecture only — populated once a real price-check source exists)
   priceHistory: [{ price: Number, checkedAt: { type: Date, default: Date.now } }],
@@ -316,6 +347,7 @@ const articleSchema = new mongoose.Schema({
 const User = mongoose.model('User', userSchema);
 const Address = mongoose.model('Address', addressSchema);
 const Category = mongoose.model('Category', categorySchema);
+const Merchant = mongoose.model('Merchant', merchantSchema);
 const Product = mongoose.model('Product', productSchema);
 const Review = mongoose.model('Review', reviewSchema);
 const Wishlist = mongoose.model('Wishlist', wishlistSchema);
@@ -479,12 +511,20 @@ async function seed() {
     }
     console.log('✅ Footer seeded');
   }
+
+  // Seed a couple of starter merchants (no logo — admin uploads their own
+  // from Merchants page) if none exist yet. Runs independently of the
+  // userCount check above so it also applies to an already-live database.
+  if ((await Merchant.countDocuments()) === 0) {
+    await Merchant.create([{ name: 'Amazon' }, { name: 'Flipkart' }]);
+    console.log('✅ Starter merchants seeded (Amazon, Flipkart — add logos from Admin → Merchants)');
+  }
 }
 
 seed().catch((err) => console.error('Seeding failed:', err));
 
 module.exports = {
-  User, Address, Category, Product, Review, Wishlist, CartItem,
+  User, Address, Category, Merchant, Product, Review, Wishlist, CartItem,
   Coupon, Order, Banner, Advertisement, Notification, Setting, Otp, HeroSlide, Article, TrustCard,
   NavItem, FooterColumn, FooterLink, HomeSection,
 };
