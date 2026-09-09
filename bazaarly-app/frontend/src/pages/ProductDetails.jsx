@@ -7,6 +7,7 @@ import { useCart } from '../context/CartContext';
 import StarRating from '../components/StarRating';
 import ImageZoom from '../components/ImageZoom';
 import ProductCard from '../components/ProductCard';
+import MerchantBadge from '../components/MerchantBadge';
 
 export default function ProductDetails() {
   const { slug } = useParams();
@@ -73,8 +74,11 @@ export default function ProductDetails() {
   }
 
   const { product, attributes, reviews } = data;
-  const discount = Math.round(((product.mrp - product.price) / product.mrp) * 100);
-  const inStock = product.stock > 0;
+  const isAffiliate = product.productType === 'affiliate';
+  const discount = isAffiliate
+    ? (product.discountPercentage || (product.originalPrice ? Math.round(((product.originalPrice - product.currentPrice) / product.originalPrice) * 100) : 0))
+    : Math.round(((product.mrp - product.price) / product.mrp) * 100);
+  const inStock = isAffiliate ? true : product.stock > 0;
 
   const handleAddToCart = async () => {
     if (!user) return navigate('/login');
@@ -85,6 +89,11 @@ export default function ProductDetails() {
     if (!user) return navigate('/login');
     await addToCart(product.id, qty);
     navigate('/checkout');
+  };
+
+  const handleCheckDeal = () => {
+    if (!product.affiliateUrl) return;
+    window.open(product.affiliateUrl, '_blank', 'noopener,noreferrer');
   };
 
   const submitReview = async (e) => {
@@ -137,27 +146,75 @@ export default function ProductDetails() {
               </button>
             </div>
           </div>
-          <h1 className="mt-2 font-display text-3xl font-semibold leading-tight text-slate-900 sm:text-[2.25rem]">
-            {product.title}
-          </h1>
+          <div className="mt-2 flex items-center gap-3">
+            <h1 className="font-display text-3xl font-semibold leading-tight text-slate-900 sm:text-[2.25rem]">
+              {product.title}
+            </h1>
+            {isAffiliate && product.merchant && <MerchantBadge merchant={product.merchant} size="lg" />}
+          </div>
 
-          <a href="#reviews" className="mt-3 inline-block">
-            <StarRating value={product.rating} count={product.rating_count} showValue />
-          </a>
+          {!isAffiliate ? (
+            <a href="#reviews" className="mt-3 inline-block">
+              <StarRating value={product.rating} count={product.rating_count} showValue />
+            </a>
+          ) : product.editorScore ? (
+            <p className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-sm font-semibold text-green-700">
+              Editor Score: {product.editorScore}/10
+            </p>
+          ) : null}
 
           {/* Price block */}
           <div className="mt-6 rounded-xl2 bg-slate-50 p-5">
             <div className="flex flex-wrap items-baseline gap-3">
-              <span className="font-display text-4xl font-bold text-slate-900">₹{product.price?.toLocaleString()}</span>
-              {product.mrp > product.price && (
-                <>
-                  <span className="text-lg text-slate-400 line-through">₹{product.mrp?.toLocaleString()}</span>
-                  <span className="rounded-full bg-green-100 px-2.5 py-1 text-sm font-semibold text-green-700">{discount}% off</span>
-                </>
+              <span className="font-display text-4xl font-bold text-slate-900">
+                ₹{(isAffiliate ? product.currentPrice : product.price)?.toLocaleString()}
+              </span>
+              {isAffiliate ? (
+                product.originalPrice > product.currentPrice && (
+                  <>
+                    <span className="text-lg text-slate-400 line-through">₹{product.originalPrice?.toLocaleString()}</span>
+                    {discount > 0 && <span className="rounded-full bg-green-100 px-2.5 py-1 text-sm font-semibold text-green-700">{discount}% off</span>}
+                  </>
+                )
+              ) : (
+                product.mrp > product.price && (
+                  <>
+                    <span className="text-lg text-slate-400 line-through">₹{product.mrp?.toLocaleString()}</span>
+                    <span className="rounded-full bg-green-100 px-2.5 py-1 text-sm font-semibold text-green-700">{discount}% off</span>
+                  </>
+                )
               )}
             </div>
-            <p className="mt-1.5 text-xs text-slate-400">Inclusive of all taxes</p>
+            {isAffiliate ? (
+              <p className="mt-1.5 text-xs text-slate-400">
+                {product.merchant ? `Price shown on ${product.merchant}. ` : ''}Prices may change — check the merchant site for the latest price.
+                {product.lastChecked && ` Last checked ${new Date(product.lastChecked).toLocaleDateString()}.`}
+              </p>
+            ) : (
+              <p className="mt-1.5 text-xs text-slate-400">Inclusive of all taxes</p>
+            )}
           </div>
+
+          {isAffiliate && (product.pros?.length > 0 || product.cons?.length > 0) && (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              {product.pros?.length > 0 && (
+                <div className="rounded-xl2 border border-green-100 bg-green-50/50 p-4">
+                  <h3 className="text-sm font-semibold text-green-700">Pros</h3>
+                  <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                    {product.pros.map((p, i) => <li key={i}>+ {p}</li>)}
+                  </ul>
+                </div>
+              )}
+              {product.cons?.length > 0 && (
+                <div className="rounded-xl2 border border-red-100 bg-red-50/50 p-4">
+                  <h3 className="text-sm font-semibold text-red-600">Cons</h3>
+                  <ul className="mt-2 space-y-1 text-sm text-slate-700">
+                    {product.cons.map((c, i) => <li key={i}>− {c}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
 
           <div>
             <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-400">Description</h2>
@@ -187,27 +244,42 @@ export default function ProductDetails() {
             </div>
           )}
 
-          <div className="mt-6 flex items-center gap-2 text-sm font-semibold">
-            <span className={`h-2 w-2 rounded-full ${inStock ? 'bg-green-500' : 'bg-red-500'}`} />
-            <span className={inStock ? 'text-green-700' : 'text-red-500'}>
-              {inStock ? `In Stock — ${product.stock} available` : 'Out of Stock'}
-            </span>
-          </div>
+          {!isAffiliate && (
+            <>
+              <div className="mt-6 flex items-center gap-2 text-sm font-semibold">
+                <span className={`h-2 w-2 rounded-full ${inStock ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span className={inStock ? 'text-green-700' : 'text-red-500'}>
+                  {inStock ? `In Stock — ${product.stock} available` : 'Out of Stock'}
+                </span>
+              </div>
 
-          <div className="mt-5 flex items-center gap-4">
-            <span className="text-sm font-medium text-slate-500">Quantity</span>
-            <div className="flex items-center rounded-full border border-slate-200">
-              <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-10 py-2 text-lg text-slate-600 hover:text-brand-600">−</button>
-              <span className="w-8 text-center font-semibold">{qty}</span>
-              <button onClick={() => setQty((q) => Math.min(product.stock, q + 1))} className="w-10 py-2 text-lg text-slate-600 hover:text-brand-600">+</button>
-            </div>
-          </div>
+              <div className="mt-5 flex items-center gap-4">
+                <span className="text-sm font-medium text-slate-500">Quantity</span>
+                <div className="flex items-center rounded-full border border-slate-200">
+                  <button onClick={() => setQty((q) => Math.max(1, q - 1))} className="w-10 py-2 text-lg text-slate-600 hover:text-brand-600">−</button>
+                  <span className="w-8 text-center font-semibold">{qty}</span>
+                  <button onClick={() => setQty((q) => Math.min(product.stock, q + 1))} className="w-10 py-2 text-lg text-slate-600 hover:text-brand-600">+</button>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Desktop actions (mobile uses the sticky bar below) */}
-          <div className="mt-8 hidden gap-4 lg:flex">
-            <button onClick={handleAddToCart} disabled={!inStock} className="btn-outline flex-1">Add to Cart</button>
-            <button onClick={handleBuyNow} disabled={!inStock} className="btn-accent flex-1">Buy Now</button>
-          </div>
+          {isAffiliate ? (
+            <div className="mt-8 hidden gap-4 lg:flex">
+              <button onClick={handleCheckDeal} className="btn-accent flex-1">{product.ctaText || 'Check Deal'}</button>
+              {product.regularUrl && (
+                <a href={product.regularUrl} target="_blank" rel="noopener noreferrer" className="btn-outline flex flex-1 items-center justify-center">
+                  View Original Listing
+                </a>
+              )}
+            </div>
+          ) : (
+            <div className="mt-8 hidden gap-4 lg:flex">
+              <button onClick={handleAddToCart} disabled={!inStock} className="btn-outline flex-1">Add to Cart</button>
+              <button onClick={handleBuyNow} disabled={!inStock} className="btn-accent flex-1">Buy Now</button>
+            </div>
+          )}
 
           {/* Trust badges */}
           <div className="mt-8 grid grid-cols-3 gap-3 border-t border-slate-100 pt-6 text-center">
@@ -282,8 +354,14 @@ export default function ProductDetails() {
 
       {/* Sticky mobile buy bar */}
       <div className="fixed inset-x-0 bottom-0 z-30 flex gap-3 border-t border-slate-100 bg-white/95 p-3 backdrop-blur lg:hidden">
-        <button onClick={handleAddToCart} disabled={!inStock} className="btn-outline flex-1">Add to Cart</button>
-        <button onClick={handleBuyNow} disabled={!inStock} className="btn-accent flex-1">Buy Now</button>
+        {isAffiliate ? (
+          <button onClick={handleCheckDeal} className="btn-accent flex-1">{product.ctaText || 'Check Deal'}</button>
+        ) : (
+          <>
+            <button onClick={handleAddToCart} disabled={!inStock} className="btn-outline flex-1">Add to Cart</button>
+            <button onClick={handleBuyNow} disabled={!inStock} className="btn-accent flex-1">Buy Now</button>
+          </>
+        )}
       </div>
     </div>
   );
