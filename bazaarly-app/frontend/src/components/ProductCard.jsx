@@ -4,6 +4,7 @@ import StarRating from './StarRating';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { Api } from '../api/client';
+import MerchantBadge from './MerchantBadge';
 
 export default function ProductCard({ product }) {
   const { addToCart } = useCart();
@@ -80,9 +81,7 @@ export default function ProductCard({ product }) {
       <div className="p-4">
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-brand-500">{product.brand}</p>
-          {isAffiliate && product.merchant && (
-            <p className="text-[11px] font-medium text-slate-400">via {product.merchant}</p>
-          )}
+          {isAffiliate && product.merchant && <MerchantBadge merchant={product.merchant} />}
         </div>
         <h3 className="mt-1 line-clamp-2 font-medium text-slate-800">{product.title}</h3>
         {!isAffiliate && (
