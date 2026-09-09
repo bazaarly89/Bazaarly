@@ -108,6 +108,11 @@ export const AdminApi = {
   updateCategory: (id, data) => unwrap(adminApi.put(`/admin/categories/${id}`, data)),
   deleteCategory: (id) => unwrap(adminApi.delete(`/admin/categories/${id}`)),
 
+  merchants: () => unwrap(adminApi.get('/admin/merchants')),
+  createMerchant: (data) => unwrap(adminApi.post('/admin/merchants', data)),
+  updateMerchant: (id, data) => unwrap(adminApi.put(`/admin/merchants/${id}`, data)),
+  deleteMerchant: (id) => unwrap(adminApi.delete(`/admin/merchants/${id}`)),
+
   orders: (status) => unwrap(adminApi.get('/admin/orders', { params: { status } })),
   orderDetails: (id) => unwrap(adminApi.get(`/admin/orders/${id}`)),
   updateOrderStatus: (id, status, note) => unwrap(adminApi.put(`/admin/orders/${id}/status`, { status, note })),
