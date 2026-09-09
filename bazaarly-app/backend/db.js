@@ -94,8 +94,9 @@ const productSchema = new mongoose.Schema({
   currentPrice: Number,           // price shown on the merchant site
   originalPrice: Number,          // pre-discount price on the merchant site
   discountPercentage: Number,
-  merchant: String,               // e.g. "Amazon", "Flipkart"
-  affiliateUrl: String,           // outbound link — configurable from admin, never hard-coded
+  merchant: String,               // e.g. "Amazon", "Flipkart", "Other"
+  affiliateUrl: String,           // outbound affiliate/tracking link — configurable from admin, never hard-coded
+  regularUrl: String,             // optional non-affiliate/plain link to the same listing (fallback/reference)
   ctaText: { type: String, default: 'Check Deal' },
   pros: [String],
   cons: [String],
