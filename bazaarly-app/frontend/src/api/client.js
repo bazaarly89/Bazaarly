@@ -20,6 +20,25 @@ adminApi.interceptors.request.use((config) => {
   return config;
 });
 
+// The admin login session (JWT) expires after 12 hours, but the admin panel
+// keeps showing "logged in" using a locally cached profile — so every admin
+// screen looked fine while every actual save/fetch silently failed with 401.
+// This catches that everywhere at once: on any expired/invalid session, clear
+// the stale session and send the admin back to log in again.
+adminApi.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401) {
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_profile');
+      if (!window.location.pathname.startsWith('/admin/login')) {
+        window.location.href = '/admin/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 function unwrap(promise) {
   return promise.then((r) => r.data).catch((e) => {
     const message = e?.response?.data?.error || 'Something went wrong. Please try again.';
