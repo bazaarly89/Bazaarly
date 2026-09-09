@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { v4: uuid } = require('uuid');
-const { Product, Category, Order, User, Coupon, Banner, Advertisement, Notification, Setting, HeroSlide, TrustCard, NavItem, FooterColumn, FooterLink, HomeSection } = require('../db');
+const { Product, Category, Merchant, Order, User, Coupon, Banner, Advertisement, Notification, Setting, HeroSlide, TrustCard, NavItem, FooterColumn, FooterLink, HomeSection } = require('../db');
 const { adminRequired } = require('../middleware/auth');
 const router = express.Router();
 
@@ -92,8 +92,8 @@ router.post('/products', async (req, res) => {
     productType = 'own',
     // own-product fields
     price, mrp, stock, sku,
-    // affiliate-product fields
-    currentPrice, originalPrice, discountPercentage, merchant, affiliateUrl, regularUrl, ctaText,
+    // affiliate-product fields — one or more merchant offers
+    offers = [],
     pros = [], cons = [], editorScore, comparisonEnabled,
     // specifications (shared attributes field)
     attributes = [],
@@ -117,14 +117,28 @@ router.post('/products', async (req, res) => {
     productData.sku = sku || '';
   } else if (productType === 'affiliate') {
     // Affiliate products never touch cart/stock — they only redirect out
-    if (!affiliateUrl) return res.status(400).json({ error: 'affiliateUrl is required for affiliate products' });
-    productData.currentPrice = currentPrice;
-    productData.originalPrice = originalPrice;
-    productData.discountPercentage = discountPercentage;
-    productData.merchant = merchant || '';
-    productData.affiliateUrl = affiliateUrl;         // tracking link — set only here, admin panel
-    productData.regularUrl = regularUrl || '';        // optional plain link, no affiliate tag
-    productData.ctaText = ctaText || 'Check Deal';
+    const cleanOffers = offers.filter((o) => o && o.affiliateUrl);
+    if (!cleanOffers.length) return res.status(400).json({ error: 'At least one merchant offer with an affiliate link is required' });
+    productData.offers = cleanOffers.map((o) => ({
+      merchant: o.merchant || '',
+      merchantLogo: o.merchantLogo || '',
+      currentPrice: o.currentPrice,
+      originalPrice: o.originalPrice,
+      discountPercentage: o.discountPercentage,
+      affiliateUrl: o.affiliateUrl,
+      regularUrl: o.regularUrl || '',
+      ctaText: o.ctaText || 'Check Deal',
+    }));
+    // Mirror the first offer into the legacy flat fields for backward compatibility
+    const primary = productData.offers[0];
+    productData.currentPrice = primary.currentPrice;
+    productData.originalPrice = primary.originalPrice;
+    productData.discountPercentage = primary.discountPercentage;
+    productData.merchant = primary.merchant;
+    productData.affiliateUrl = primary.affiliateUrl;
+    productData.regularUrl = primary.regularUrl;
+    productData.ctaText = primary.ctaText;
+
     productData.pros = pros;
     productData.cons = cons;
     productData.editorScore = editorScore;
@@ -140,8 +154,7 @@ router.put('/products/:id', async (req, res) => {
     title, description, shortDescription, categoryId, brand, isActive, images, tags,
     featured, trending, deal, productType,
     price, mrp, stock, sku,
-    currentPrice, originalPrice, discountPercentage, merchant, affiliateUrl, regularUrl, ctaText,
-    pros, cons, editorScore, comparisonEnabled, attributes,
+    offers, pros, cons, editorScore, comparisonEnabled, attributes,
   } = req.body;
 
   const update = { updatedAt: new Date() };
@@ -165,14 +178,29 @@ router.put('/products/:id', async (req, res) => {
   if (stock !== undefined) update.stock = stock;
   if (sku !== undefined) update.sku = sku;
 
-  // affiliate-product fields
-  if (currentPrice !== undefined) update.currentPrice = currentPrice;
-  if (originalPrice !== undefined) update.originalPrice = originalPrice;
-  if (discountPercentage !== undefined) update.discountPercentage = discountPercentage;
-  if (merchant !== undefined) update.merchant = merchant;
-  if (affiliateUrl !== undefined) update.affiliateUrl = affiliateUrl;
-  if (regularUrl !== undefined) update.regularUrl = regularUrl;
-  if (ctaText !== undefined) update.ctaText = ctaText;
+  // affiliate-product fields — one or more merchant offers
+  if (Array.isArray(offers)) {
+    const cleanOffers = offers.filter((o) => o && o.affiliateUrl);
+    update.offers = cleanOffers.map((o) => ({
+      merchant: o.merchant || '',
+      merchantLogo: o.merchantLogo || '',
+      currentPrice: o.currentPrice,
+      originalPrice: o.originalPrice,
+      discountPercentage: o.discountPercentage,
+      affiliateUrl: o.affiliateUrl,
+      regularUrl: o.regularUrl || '',
+      ctaText: o.ctaText || 'Check Deal',
+    }));
+    // Mirror the first offer into the legacy flat fields for backward compatibility
+    const primary = update.offers[0] || {};
+    update.currentPrice = primary.currentPrice;
+    update.originalPrice = primary.originalPrice;
+    update.discountPercentage = primary.discountPercentage;
+    update.merchant = primary.merchant || '';
+    update.affiliateUrl = primary.affiliateUrl || '';
+    update.regularUrl = primary.regularUrl || '';
+    update.ctaText = primary.ctaText || 'Check Deal';
+  }
   if (Array.isArray(pros)) update.pros = pros;
   if (Array.isArray(cons)) update.cons = cons;
   if (editorScore !== undefined) update.editorScore = editorScore;
@@ -226,6 +254,36 @@ router.put('/categories/:id', async (req, res) => {
 router.delete('/categories/:id', async (req, res) => {
   await Category.findByIdAndDelete(req.params.id);
   res.json({ message: 'Category deleted' });
+});
+
+// ---------------- MERCHANTS (Amazon, Flipkart, etc. — reusable logo directory) ----------------
+router.get('/merchants', async (req, res) => {
+  const merchants = await Merchant.find().sort({ name: 1 }).lean();
+  res.json({ merchants: merchants.map((m) => ({ ...m, id: m._id })) });
+});
+
+router.post('/merchants', async (req, res) => {
+  const { name, logo } = req.body;
+  if (!name || !name.trim()) return res.status(400).json({ error: 'Merchant name is required' });
+  const existing = await Merchant.findOne({ name: name.trim() });
+  if (existing) return res.status(400).json({ error: 'A merchant with this name already exists' });
+  const merchant = await Merchant.create({ name: name.trim(), logo: logo || '' });
+  res.status(201).json({ merchant: { ...merchant.toObject(), id: merchant._id } });
+});
+
+router.put('/merchants/:id', async (req, res) => {
+  const { name, logo, isActive } = req.body;
+  const update = {};
+  if (name !== undefined) update.name = name;
+  if (logo !== undefined) update.logo = logo;
+  if (isActive !== undefined) update.isActive = isActive;
+  const merchant = await Merchant.findByIdAndUpdate(req.params.id, update, { new: true });
+  res.json({ merchant: { ...merchant.toObject(), id: merchant._id } });
+});
+
+router.delete('/merchants/:id', async (req, res) => {
+  await Merchant.findByIdAndDelete(req.params.id);
+  res.json({ message: 'Merchant deleted' });
 });
 
 // ---------------- ORDERS ----------------
