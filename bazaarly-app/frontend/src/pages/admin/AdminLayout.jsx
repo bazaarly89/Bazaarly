@@ -7,6 +7,7 @@ const LINKS = [
   ['/admin/home-sections', 'Homepage Sections'],
   ['/admin/products', 'Products'],
   ['/admin/categories', 'Categories'],
+  ['/admin/merchants', 'Merchants'],
   ['/admin/inventory', 'Inventory'],
   ['/admin/orders', 'Orders'],
   ['/admin/customers', 'Customers'],
