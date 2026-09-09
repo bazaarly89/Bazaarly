@@ -75,8 +75,21 @@ export default function ProductDetails() {
 
   const { product, attributes, reviews } = data;
   const isAffiliate = product.productType === 'affiliate';
+
+  // A product can have multiple merchant offers (Amazon, Flipkart, etc.) — the
+  // customer sees all of them, cheapest first. Falls back to the legacy flat
+  // fields for products saved before multi-offer support existed.
+  const offers = product.offers?.length ? product.offers : (isAffiliate ? [{
+    merchant: product.merchant, merchantLogo: product.merchantLogo,
+    currentPrice: product.currentPrice, originalPrice: product.originalPrice,
+    discountPercentage: product.discountPercentage,
+    affiliateUrl: product.affiliateUrl, regularUrl: product.regularUrl, ctaText: product.ctaText,
+  }] : []);
+  const sortedOffers = [...offers].sort((a, b) => (a.currentPrice ?? Infinity) - (b.currentPrice ?? Infinity));
+  const bestOffer = sortedOffers[0] || null;
+
   const discount = isAffiliate
-    ? (product.discountPercentage || (product.originalPrice ? Math.round(((product.originalPrice - product.currentPrice) / product.originalPrice) * 100) : 0))
+    ? (bestOffer?.discountPercentage || (bestOffer?.originalPrice ? Math.round(((bestOffer.originalPrice - bestOffer.currentPrice) / bestOffer.originalPrice) * 100) : 0))
     : Math.round(((product.mrp - product.price) / product.mrp) * 100);
   const inStock = isAffiliate ? true : product.stock > 0;
 
@@ -91,9 +104,9 @@ export default function ProductDetails() {
     navigate('/checkout');
   };
 
-  const handleCheckDeal = () => {
-    if (!product.affiliateUrl) return;
-    window.open(product.affiliateUrl, '_blank', 'noopener,noreferrer');
+  const handleCheckDeal = (url) => {
+    if (!url) return;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const submitReview = async (e) => {
@@ -150,7 +163,7 @@ export default function ProductDetails() {
             <h1 className="font-display text-3xl font-semibold leading-tight text-slate-900 sm:text-[2.25rem]">
               {product.title}
             </h1>
-            {isAffiliate && product.merchant && <MerchantBadge merchant={product.merchant} size="lg" />}
+            {isAffiliate && bestOffer?.merchant && <MerchantBadge merchant={bestOffer.merchant} logo={bestOffer.merchantLogo} size="lg" />}
           </div>
 
           {!isAffiliate ? (
@@ -167,12 +180,12 @@ export default function ProductDetails() {
           <div className="mt-6 rounded-xl2 bg-slate-50 p-5">
             <div className="flex flex-wrap items-baseline gap-3">
               <span className="font-display text-4xl font-bold text-slate-900">
-                ₹{(isAffiliate ? product.currentPrice : product.price)?.toLocaleString()}
+                ₹{(isAffiliate ? bestOffer?.currentPrice : product.price)?.toLocaleString()}
               </span>
               {isAffiliate ? (
-                product.originalPrice > product.currentPrice && (
+                bestOffer?.originalPrice > bestOffer?.currentPrice && (
                   <>
-                    <span className="text-lg text-slate-400 line-through">₹{product.originalPrice?.toLocaleString()}</span>
+                    <span className="text-lg text-slate-400 line-through">₹{bestOffer.originalPrice?.toLocaleString()}</span>
                     {discount > 0 && <span className="rounded-full bg-green-100 px-2.5 py-1 text-sm font-semibold text-green-700">{discount}% off</span>}
                   </>
                 )
@@ -187,13 +200,40 @@ export default function ProductDetails() {
             </div>
             {isAffiliate ? (
               <p className="mt-1.5 text-xs text-slate-400">
-                {product.merchant ? `Price shown on ${product.merchant}. ` : ''}Prices may change — check the merchant site for the latest price.
+                {bestOffer?.merchant ? `Lowest price shown, at ${bestOffer.merchant}. ` : ''}Prices may change — check the merchant site for the latest price.
                 {product.lastChecked && ` Last checked ${new Date(product.lastChecked).toLocaleDateString()}.`}
               </p>
             ) : (
               <p className="mt-1.5 text-xs text-slate-400">Inclusive of all taxes</p>
             )}
           </div>
+
+          {/* All merchant offers — cheapest first, so the customer can pick where to buy */}
+          {isAffiliate && sortedOffers.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {sortedOffers.map((o, i) => (
+                <div key={i} className="flex items-center justify-between gap-3 rounded-xl2 border border-slate-200 p-3">
+                  <div className="flex items-center gap-3">
+                    <MerchantBadge merchant={o.merchant} logo={o.merchantLogo} size="lg" />
+                    <div>
+                      <p className="font-semibold text-slate-900">₹{o.currentPrice?.toLocaleString()}</p>
+                      {i === 0 && sortedOffers.length > 1 && <p className="text-[11px] font-semibold text-green-600">Best Price</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {o.regularUrl && (
+                      <a href={o.regularUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-slate-400 hover:text-slate-600 hover:underline">
+                        View listing
+                      </a>
+                    )}
+                    <button onClick={() => handleCheckDeal(o.affiliateUrl)} className="btn-primary px-4 py-1.5 text-sm">
+                      {o.ctaText || 'Check Deal'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {isAffiliate && (product.pros?.length > 0 || product.cons?.length > 0) && (
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -264,17 +304,9 @@ export default function ProductDetails() {
             </>
           )}
 
-          {/* Desktop actions (mobile uses the sticky bar below) */}
-          {isAffiliate ? (
-            <div className="mt-8 hidden gap-4 lg:flex">
-              <button onClick={handleCheckDeal} className="btn-accent flex-1">{product.ctaText || 'Check Deal'}</button>
-              {product.regularUrl && (
-                <a href={product.regularUrl} target="_blank" rel="noopener noreferrer" className="btn-outline flex flex-1 items-center justify-center">
-                  View Original Listing
-                </a>
-              )}
-            </div>
-          ) : (
+          {/* Desktop actions (mobile uses the sticky bar below) — affiliate products already
+              have per-store buttons in the offers list above, so only own products need this */}
+          {!isAffiliate && (
             <div className="mt-8 hidden gap-4 lg:flex">
               <button onClick={handleAddToCart} disabled={!inStock} className="btn-outline flex-1">Add to Cart</button>
               <button onClick={handleBuyNow} disabled={!inStock} className="btn-accent flex-1">Buy Now</button>
@@ -355,7 +387,7 @@ export default function ProductDetails() {
       {/* Sticky mobile buy bar */}
       <div className="fixed inset-x-0 bottom-0 z-30 flex gap-3 border-t border-slate-100 bg-white/95 p-3 backdrop-blur lg:hidden">
         {isAffiliate ? (
-          <button onClick={handleCheckDeal} className="btn-accent flex-1">{product.ctaText || 'Check Deal'}</button>
+          <button onClick={() => handleCheckDeal(bestOffer?.affiliateUrl)} className="btn-accent flex-1">{bestOffer?.ctaText || 'Check Deal'}</button>
         ) : (
           <>
             <button onClick={handleAddToCart} disabled={!inStock} className="btn-outline flex-1">Add to Cart</button>
