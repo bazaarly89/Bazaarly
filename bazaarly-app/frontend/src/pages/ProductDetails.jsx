@@ -159,11 +159,16 @@ export default function ProductDetails() {
               </button>
             </div>
           </div>
-          <div className="mt-2 flex items-center gap-3">
+          <div className="mt-2 flex flex-wrap items-center gap-3">
             <h1 className="font-display text-3xl font-semibold leading-tight text-slate-900 sm:text-[2.25rem]">
               {product.title}
             </h1>
             {isAffiliate && bestOffer?.merchant && <MerchantBadge merchant={bestOffer.merchant} logo={bestOffer.merchantLogo} size="lg" />}
+            {product.isRecommended && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-700">
+                ★ Dostivox Recommended
+              </span>
+            )}
           </div>
 
           {!isAffiliate ? (
@@ -207,6 +212,12 @@ export default function ProductDetails() {
               <p className="mt-1.5 text-xs text-slate-400">Inclusive of all taxes</p>
             )}
           </div>
+
+          {isAffiliate && (
+            <p className="mt-2 text-[11px] leading-snug text-slate-400">
+              Affiliate link — we may earn a commission if you purchase through our link.
+            </p>
+          )}
 
           {/* All merchant offers — cheapest first, so the customer can pick where to buy */}
           {isAffiliate && sortedOffers.length > 0 && (
