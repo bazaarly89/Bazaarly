@@ -73,6 +73,11 @@ siteContent: () => unwrap(api.get('/content')),
   footer: () => unwrap(api.get('/footer')),
   homeSections: () => unwrap(api.get('/home-sections')),
 
+  // buying guides / blog (public, read-only)
+  articles: (params) => unwrap(api.get('/articles', { params })),
+  article: (slug) => unwrap(api.get(`/articles/${slug}`)),
+  articleCategories: () => unwrap(api.get('/articles/categories')),
+
   // cart
   getCart: () => unwrap(api.get('/cart')),
   addToCart: (productId, quantity = 1) => unwrap(api.post('/cart', { productId, quantity })),
@@ -178,6 +183,12 @@ export const AdminApi = {
   homeSections: () => unwrap(adminApi.get('/admin/home-sections')),
   updateHomeSection: (id, data) => unwrap(adminApi.put(`/admin/home-sections/${id}`, data)),
   reorderHomeSections: (order) => unwrap(adminApi.put('/admin/home-sections-reorder', { order })),
+
+  articles: () => unwrap(adminApi.get('/admin/articles')),
+  article: (id) => unwrap(adminApi.get(`/admin/articles/${id}`)),
+  createArticle: (data) => unwrap(adminApi.post('/admin/articles', data)),
+  updateArticle: (id, data) => unwrap(adminApi.put(`/admin/articles/${id}`, data)),
+  deleteArticle: (id) => unwrap(adminApi.delete(`/admin/articles/${id}`)),
 
   salesReport: (params) => unwrap(adminApi.get('/admin/reports/sales', { params })),
   topProducts: () => unwrap(adminApi.get('/admin/reports/top-products')),
