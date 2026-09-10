@@ -1,22 +1,46 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { Api } from '../api/client';
+
+// Fallback text used only until the content loads (or if a key was never set).
+const DEFAULT_CONTENT = {
+  contact_heading: 'Get in Touch',
+  contact_subtitle: "Have a question about an order or product? We'd love to help.",
+  contact_email: 'support@dostivox.com',
+  contact_phone: '+91 98765 43210',
+  contact_hours: 'Mon–Sat, 9:00 AM – 7:00 PM IST',
+  contact_address: 'Dostivox Commerce Pvt. Ltd., Bengaluru, India',
+};
 
 export default function Contact() {
   const [sent, setSent] = useState(false);
+  const [content, setContent] = useState(DEFAULT_CONTENT);
+
+  useEffect(() => {
+    Api.siteContent()
+      .then(({ content }) => {
+        const cleaned = Object.fromEntries(
+          Object.entries(content || {}).filter(([, v]) => v !== '' && v != null)
+        );
+        setContent((c) => ({ ...c, ...cleaned }));
+      })
+      .catch(() => {});
+  }, []);
+
   const submit = (e) => { e.preventDefault(); setSent(true); };
 
   return (
     <div className="container-app py-14">
       <div className="mx-auto max-w-2xl text-center">
-        <h1 className="section-title">Get in Touch</h1>
-        <p className="mt-2 text-slate-500">Have a question about an order or product? We'd love to help.</p>
+        <h1 className="section-title">{content.contact_heading}</h1>
+        <p className="mt-2 text-slate-500">{content.contact_subtitle}</p>
       </div>
 
       <div className="mx-auto mt-10 grid max-w-4xl gap-8 md:grid-cols-2">
         <div className="card p-6 space-y-4 text-sm text-slate-600">
-          <div><p className="font-semibold text-slate-800">Email</p><p>support@dostivox.com</p></div>
-          <div><p className="font-semibold text-slate-800">Phone</p><p>+91 98765 43210</p></div>
-          <div><p className="font-semibold text-slate-800">Hours</p><p>Mon–Sat, 9:00 AM – 7:00 PM IST</p></div>
-          <div><p className="font-semibold text-slate-800">Address</p><p>Dostivox Commerce Pvt. Ltd., Bengaluru, India</p></div>
+          <div><p className="font-semibold text-slate-800">Email</p><p>{content.contact_email}</p></div>
+          <div><p className="font-semibold text-slate-800">Phone</p><p>{content.contact_phone}</p></div>
+          <div><p className="font-semibold text-slate-800">Hours</p><p>{content.contact_hours}</p></div>
+          <div><p className="font-semibold text-slate-800">Address</p><p>{content.contact_address}</p></div>
         </div>
 
         <form onSubmit={submit} className="card p-6 space-y-4">
