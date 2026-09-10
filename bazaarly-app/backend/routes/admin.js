@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { v4: uuid } = require('uuid');
-const { Product, Category, Merchant, Order, User, Coupon, Banner, Advertisement, Notification, Setting, HeroSlide, TrustCard, NavItem, FooterColumn, FooterLink, HomeSection } = require('../db');
+const { Product, Category, Merchant, Order, User, Coupon, Banner, Advertisement, Notification, Setting, HeroSlide, TrustCard, NavItem, FooterColumn, FooterLink, HomeSection, Article, ARTICLE_CATEGORIES } = require('../db');
 const { adminRequired } = require('../middleware/auth');
 const router = express.Router();
 
@@ -655,6 +655,96 @@ router.put('/home-sections-reorder', async (req, res) => {
   await Promise.all(order.map((o) => HomeSection.findByIdAndUpdate(o.id, { position: o.position })));
   const sections = await HomeSection.find().sort({ position: 1 }).lean();
   res.json({ sections: sections.map((s) => ({ ...s, id: s._id })) });
+});
+
+// ---------------- BUYING GUIDES / BLOG ARTICLES ----------------
+function slugifyArticle(str) {
+  return String(str).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+}
+
+router.get('/articles', async (req, res) => {
+  const rows = await Article.find().sort({ updatedAt: -1 }).lean();
+  res.json({ articles: rows.map((a) => ({ ...a, id: a._id })), categories: ARTICLE_CATEGORIES });
+});
+
+router.get('/articles/:id', async (req, res) => {
+  const article = await Article.findById(req.params.id).lean();
+  if (!article) return res.status(404).json({ error: 'Article not found' });
+  res.json({ article: { ...article, id: article._id } });
+});
+
+router.post('/articles', async (req, res) => {
+  const {
+    title, slug, featuredImage, author, category, content,
+    faq = [], relatedProductIds = [],
+    seoTitle, seoDescription, canonicalUrl, ogImage,
+    isPublished = true, publishedAt,
+  } = req.body;
+
+  if (!title || !title.trim()) return res.status(400).json({ error: 'Title is required' });
+  if (!content || !content.trim()) return res.status(400).json({ error: 'Content is required' });
+
+  let finalSlug = slugifyArticle(slug || title);
+  if (!finalSlug) return res.status(400).json({ error: 'Could not generate a valid slug — please set one manually' });
+  if (await Article.findOne({ slug: finalSlug })) finalSlug = `${finalSlug}-${Date.now().toString(36)}`;
+
+  const article = await Article.create({
+    title: title.trim(),
+    slug: finalSlug,
+    featuredImage: featuredImage || '',
+    author: author || 'Dostivox Team',
+    category: ARTICLE_CATEGORIES.includes(category) ? category : 'Buying Guides',
+    content,
+    faq: (faq || []).filter((f) => f && f.question && f.answer),
+    relatedProductIds: Array.isArray(relatedProductIds) ? relatedProductIds : [],
+    seoTitle: seoTitle || title,
+    seoDescription: seoDescription || '',
+    canonicalUrl: canonicalUrl || '',
+    ogImage: ogImage || featuredImage || '',
+    isPublished: !!isPublished,
+    publishedAt: publishedAt ? new Date(publishedAt) : new Date(),
+  });
+  res.status(201).json({ article: { ...article.toObject(), id: article._id } });
+});
+
+router.put('/articles/:id', async (req, res) => {
+  const {
+    title, slug, featuredImage, author, category, content,
+    faq, relatedProductIds,
+    seoTitle, seoDescription, canonicalUrl, ogImage,
+    isPublished, publishedAt,
+  } = req.body;
+
+  const update = { updatedAt: new Date() };
+  if (title !== undefined) update.title = title;
+  if (slug !== undefined && slug.trim()) {
+    const finalSlug = slugifyArticle(slug);
+    if (!finalSlug) return res.status(400).json({ error: 'Invalid slug' });
+    const clash = await Article.findOne({ slug: finalSlug, _id: { $ne: req.params.id } });
+    if (clash) return res.status(400).json({ error: 'That slug is already used by another article' });
+    update.slug = finalSlug;
+  }
+  if (featuredImage !== undefined) update.featuredImage = featuredImage;
+  if (author !== undefined) update.author = author;
+  if (category !== undefined) update.category = ARTICLE_CATEGORIES.includes(category) ? category : 'Buying Guides';
+  if (content !== undefined) update.content = content;
+  if (Array.isArray(faq)) update.faq = faq.filter((f) => f && f.question && f.answer);
+  if (Array.isArray(relatedProductIds)) update.relatedProductIds = relatedProductIds;
+  if (seoTitle !== undefined) update.seoTitle = seoTitle;
+  if (seoDescription !== undefined) update.seoDescription = seoDescription;
+  if (canonicalUrl !== undefined) update.canonicalUrl = canonicalUrl;
+  if (ogImage !== undefined) update.ogImage = ogImage;
+  if (isPublished !== undefined) update.isPublished = isPublished;
+  if (publishedAt !== undefined) update.publishedAt = new Date(publishedAt);
+
+  const article = await Article.findByIdAndUpdate(req.params.id, update, { new: true });
+  if (!article) return res.status(404).json({ error: 'Article not found' });
+  res.json({ article: { ...article.toObject(), id: article._id } });
+});
+
+router.delete('/articles/:id', async (req, res) => {
+  await Article.findByIdAndDelete(req.params.id);
+  res.json({ message: 'Article deleted' });
 });
 
 module.exports = router;
