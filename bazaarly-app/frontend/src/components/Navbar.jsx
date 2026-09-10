@@ -21,6 +21,8 @@ export default function Navbar() {
     { to: '/', label: 'Home' },
     { to: '/categories', label: 'Categories' },
     { to: '/products', label: 'Shop' },
+    { to: '/products?deal=true', label: 'Deals' },
+    { to: '/products?comparisonEnabled=true', label: 'Compare' },
     { to: '/blog', label: 'Blog' },
     { to: '/about', label: 'About' },
     { to: '/contact', label: 'Contact' },
