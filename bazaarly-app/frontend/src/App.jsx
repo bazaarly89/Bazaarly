@@ -24,6 +24,10 @@ import Terms from './pages/Terms';
 import HelpCenter from './pages/HelpCenter';
 import Blog from './pages/Blog';
 import ArticleDetails from './pages/ArticleDetails';
+import AffiliateDisclosure from './pages/AffiliateDisclosure';
+import Disclaimer from './pages/Disclaimer';
+import CookiePolicy from './pages/CookiePolicy';
+import Sitemap from './pages/Sitemap';
 import NotFound from './pages/NotFound';
 
 // Admin pages
@@ -85,6 +89,10 @@ export default function App() {
       <Route path="/search" element={<Layout><Search /></Layout>} />
       <Route path="/blog" element={<Layout><Blog /></Layout>} />
       <Route path="/blog/:slug" element={<Layout><ArticleDetails /></Layout>} />
+      <Route path="/affiliate-disclosure" element={<Layout><AffiliateDisclosure /></Layout>} />
+      <Route path="/disclaimer" element={<Layout><Disclaimer /></Layout>} />
+      <Route path="/cookie-policy" element={<Layout><CookiePolicy /></Layout>} />
+      <Route path="/sitemap" element={<Layout><Sitemap /></Layout>} />
       <Route path="/cart" element={<Layout><Cart /></Layout>} />
       <Route path="/checkout" element={<Layout><RequireAuth><Checkout /></RequireAuth></Layout>} />
       <Route path="/login" element={<Layout><Login /></Layout>} />
