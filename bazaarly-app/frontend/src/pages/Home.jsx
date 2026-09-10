@@ -185,23 +185,24 @@ export default function Home() {
             return (
               <section key="categories">
                 <div className="mb-5">
-                  <h2 className="section-title">{s.title || 'Popular Categories'}</h2>
+                  <h2 className="section-title">{s.title || 'Shop by Category'}</h2>
                   {s.subtitle && <p className="mt-1 text-sm text-slate-500">{s.subtitle}</p>}
                 </div>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                <div className="flex gap-5 overflow-x-auto pb-2 sm:grid sm:grid-cols-4 sm:gap-6 sm:overflow-visible md:grid-cols-6 lg:grid-cols-9">
                   {categories.map((cat) => (
                     <Link
                       key={cat.id}
                       to={`/products?category=${cat.slug}`}
-                      className="group relative aspect-square overflow-hidden rounded-2xl bg-slate-100 shadow-card"
+                      className="group flex shrink-0 flex-col items-center gap-2 text-center sm:shrink"
                     >
-                      {cat.image ? (
-                        <img src={cat.image} alt={cat.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-3xl">🛍</div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-transparent" />
-                      <span className="absolute bottom-2 left-2 right-2 text-sm font-semibold text-white">{cat.name}</span>
+                      <div className="h-16 w-16 overflow-hidden rounded-full bg-slate-100 shadow-sm ring-1 ring-slate-100 transition group-hover:ring-brand-300 sm:h-20 sm:w-20">
+                        {cat.image ? (
+                          <img src={cat.image} alt={cat.name} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-2xl">🛍</div>
+                        )}
+                      </div>
+                      <span className="w-20 text-xs font-medium text-slate-600 group-hover:text-brand-600">{cat.name}</span>
                     </Link>
                   ))}
                 </div>
