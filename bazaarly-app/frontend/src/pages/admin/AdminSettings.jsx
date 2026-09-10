@@ -14,8 +14,8 @@ const heroTitleModules = {
   ],
 };
 
-// Same fallback text the public Help Center / Privacy / Terms pages use —
-// duplicated here so the admin form isn't blank the first time it's opened.
+// Same fallback text/content the public pages use — duplicated here so the
+// admin form isn't blank the first time it's opened.
 const DEFAULT_HELP_FAQS = [
   { q: 'How do I track my order?', a: 'Go to My Orders and click on any order to see its live tracking timeline, from placement to delivery.' },
   { q: 'What payment methods do you accept?', a: 'We accept all major cards, UPI, and net banking via Razorpay, as well as Cash on Delivery for eligible orders.' },
@@ -44,6 +44,7 @@ const DEFAULT_TERMS_SECTIONS = [
   { title: 'Limitation of Liability', body: 'Dostivox is not liable for indirect, incidental, or consequential damages arising from use of the site or products purchased through it, to the maximum extent permitted by law.' },
   { title: 'Governing Law', body: 'These terms are governed by the laws of India, without regard to conflict of law principles.' },
 ];
+const DEFAULT_TOOLS = [];
 
 function parseJsonArray(str, fallback) {
   if (!str) return fallback;
@@ -60,10 +61,12 @@ export default function AdminSettings() {
   const [saved, setSaved] = useState(false);
   const [contentSaved, setContentSaved] = useState(false);
   const [pagesSaved, setPagesSaved] = useState(false);
+  const [siteWideSaved, setSiteWideSaved] = useState(false);
 
   const [helpFaqs, setHelpFaqs] = useState(DEFAULT_HELP_FAQS);
   const [privacySections, setPrivacySections] = useState(DEFAULT_PRIVACY_SECTIONS);
   const [termsSections, setTermsSections] = useState(DEFAULT_TERMS_SECTIONS);
+  const [tools, setTools] = useState(DEFAULT_TOOLS);
 
   useEffect(() => {
     AdminApi.settings().then((r) => {
@@ -71,6 +74,7 @@ export default function AdminSettings() {
       setHelpFaqs(parseJsonArray(r.settings.help_faqs, DEFAULT_HELP_FAQS));
       setPrivacySections(parseJsonArray(r.settings.privacy_sections, DEFAULT_PRIVACY_SECTIONS));
       setTermsSections(parseJsonArray(r.settings.terms_sections, DEFAULT_TERMS_SECTIONS));
+      setTools(parseJsonArray(r.settings.home_tools, DEFAULT_TOOLS));
     });
   }, []);
 
@@ -90,6 +94,9 @@ export default function AdminSettings() {
     const contentKeys = [
       'home_hero_badge', 'home_hero_title', 'home_hero_subtitle',
       'home_hero_bg_from', 'home_hero_bg_to', 'home_hero_image',
+      'home_hero_cta1_text', 'home_hero_cta1_link',
+      'home_hero_cta2_text', 'home_hero_cta2_link',
+      'home_search_placeholder',
       'home_promo_title', 'home_promo_text', 'home_trending_title',
       'about_heading', 'about_para1', 'about_para2',
       'about_stat1_num', 'about_stat1_label',
@@ -135,6 +142,32 @@ export default function AdminSettings() {
     setTimeout(() => setPagesSaved(false), 2000);
   };
 
+  // ---- Free Tools / Social Links / Affiliate Disclosure / Disclaimer / Cookie Policy ----
+  const updateTool = (i, key, value) => setTools((rows) => rows.map((r, idx) => (idx === i ? { ...r, [key]: value } : r)));
+  const addTool = () => setTools((rows) => [...rows, { title: '', description: '', link: '', icon: '🛠' }]);
+  const removeTool = (i) => setTools((rows) => rows.filter((_, idx) => idx !== i));
+
+  const submitSiteWide = async (e) => {
+    e.preventDefault();
+    const payload = {
+      home_tools: JSON.stringify(tools.filter((t) => t.title.trim() && t.link.trim())),
+      social_instagram: settings.social_instagram || '',
+      social_facebook: settings.social_facebook || '',
+      social_twitter: settings.social_twitter || '',
+      social_youtube: settings.social_youtube || '',
+      affiliate_disclosure_heading: settings.affiliate_disclosure_heading || '',
+      affiliate_disclosure_body: settings.affiliate_disclosure_body || '',
+      disclaimer_heading: settings.disclaimer_heading || '',
+      disclaimer_body: settings.disclaimer_body || '',
+      cookie_heading: settings.cookie_heading || '',
+      cookie_body: settings.cookie_body || '',
+    };
+    const { settings: updated } = await AdminApi.updateSettings(payload);
+    setSettings(updated);
+    setSiteWideSaved(true);
+    setTimeout(() => setSiteWideSaved(false), 2000);
+  };
+
   return (
     <div>
       <h1 className="section-title mb-6">Store Settings</h1>
@@ -163,20 +196,39 @@ export default function AdminSettings() {
 
         <div>
           <label className="label">Hero Badge (small pill text)</label>
-          <input className="input" value={field('home_hero_badge')} onChange={update('home_hero_badge')} />
+          <input className="input" value={field('home_hero_badge')} onChange={update('home_hero_badge')} placeholder="Smart Shopping" />
         </div>
         <div>
-          <label className="label">Hero Title (select a word, then use the toolbar to resize / color it — e.g. make "Shop" big, "Live Beautifully" small)</label>
+          <label className="label">Hero Title (select a word, then use the toolbar to resize / color it — e.g. make "Shop" big, "Compare Better" small)</label>
           <ReactQuill
             theme="snow"
             modules={heroTitleModules}
             value={field('home_hero_title')}
             onChange={(html) => setSettings((s) => ({ ...s, home_hero_title: html }))}
+            placeholder="Shop Smarter. Compare Better. Save More."
           />
         </div>
         <div>
           <label className="label">Hero Subtitle</label>
-          <textarea className="input" rows={2} value={field('home_hero_subtitle')} onChange={update('home_hero_subtitle')} />
+          <textarea className="input" rows={2} value={field('home_hero_subtitle')} onChange={update('home_hero_subtitle')} placeholder="Discover the best products, deals and buying recommendations in one place." />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Hero Button 1 Text</label>
+            <input className="input" value={field('home_hero_cta1_text')} onChange={update('home_hero_cta1_text')} placeholder="Explore Deals" />
+          </div>
+          <div>
+            <label className="label">Hero Button 1 Link</label>
+            <input className="input" value={field('home_hero_cta1_link')} onChange={update('home_hero_cta1_link')} placeholder="/products?deal=true" />
+          </div>
+          <div>
+            <label className="label">Hero Button 2 Text</label>
+            <input className="input" value={field('home_hero_cta2_text')} onChange={update('home_hero_cta2_text')} placeholder="Compare Products" />
+          </div>
+          <div>
+            <label className="label">Hero Button 2 Link</label>
+            <input className="input" value={field('home_hero_cta2_link')} onChange={update('home_hero_cta2_link')} placeholder="/products?comparisonEnabled=true" />
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
@@ -196,6 +248,10 @@ export default function AdminSettings() {
           )}
         </div>
         <div>
+          <label className="label">Search Bar Placeholder (on homepage)</label>
+          <input className="input" value={field('home_search_placeholder')} onChange={update('home_search_placeholder')} placeholder="What are you looking for?" />
+        </div>
+        <div>
           <label className="label">Promo Banner Title</label>
           <input className="input" value={field('home_promo_title')} onChange={update('home_promo_title')} />
         </div>
@@ -203,10 +259,11 @@ export default function AdminSettings() {
           <label className="label">Promo Banner Text</label>
           <textarea className="input" rows={2} value={field('home_promo_text')} onChange={update('home_promo_text')} />
         </div>
-<div>
-  <label className="label">Trending Section Title</label>
-  <input className="input" value={field('home_trending_title')} onChange={update('home_trending_title')} />
-</div>
+        <div>
+          <label className="label">Trending Section Title</label>
+          <input className="input" value={field('home_trending_title')} onChange={update('home_trending_title')} />
+        </div>
+
         <h2 className="pt-2 font-semibold">Website Content — About Page</h2>
 
         <div>
@@ -357,6 +414,79 @@ export default function AdminSettings() {
         <div className="flex items-center gap-3">
           <button className="btn-primary">Save Contact, Help &amp; Legal Pages</button>
           {pagesSaved && <span className="text-sm text-green-600">Saved!</span>}
+        </div>
+      </form>
+
+      {/* ---------------- FREE TOOLS / SOCIAL LINKS / AFFILIATE / DISCLAIMER / COOKIES ---------------- */}
+      <form onSubmit={submitSiteWide} className="card mt-6 max-w-2xl space-y-4 p-6">
+        <h2 className="font-semibold">Free Tools, Social Links &amp; More Legal Pages</h2>
+
+        <div className="rounded-lg border border-slate-200 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-slate-700">Free Tools (shown in the homepage "Free Tools by Dostivox" section)</h3>
+          <div className="space-y-3">
+            {tools.map((t, i) => (
+              <div key={i} className="grid gap-2 rounded-lg border border-slate-200 p-3 sm:grid-cols-[60px_1fr_1fr_1fr_auto]">
+                <input placeholder="🛠" className="input text-center" value={t.icon} onChange={(e) => updateTool(i, 'icon', e.target.value)} />
+                <input placeholder="Tool name" className="input" value={t.title} onChange={(e) => updateTool(i, 'title', e.target.value)} />
+                <input placeholder="Short description" className="input" value={t.description} onChange={(e) => updateTool(i, 'description', e.target.value)} />
+                <input placeholder="/tools/emi-calculator" className="input" value={t.link} onChange={(e) => updateTool(i, 'link', e.target.value)} />
+                <button type="button" onClick={() => removeTool(i)} className="text-sm text-red-500 hover:underline sm:self-start">Remove</button>
+              </div>
+            ))}
+            {tools.length === 0 && <p className="text-sm text-slate-400">No tools added yet — this section will show "Coming soon" on the homepage until you add one.</p>}
+          </div>
+          <button type="button" onClick={addTool} className="btn-ghost mt-2 text-sm">+ Add Tool</button>
+        </div>
+
+        <div className="rounded-lg border border-slate-200 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-slate-700">Social Links (only shown in the footer if filled in)</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="label">Instagram URL</label>
+              <input className="input" value={field('social_instagram')} onChange={update('social_instagram')} placeholder="https://instagram.com/yourhandle" />
+            </div>
+            <div>
+              <label className="label">Facebook URL</label>
+              <input className="input" value={field('social_facebook')} onChange={update('social_facebook')} placeholder="https://facebook.com/yourpage" />
+            </div>
+            <div>
+              <label className="label">X / Twitter URL</label>
+              <input className="input" value={field('social_twitter')} onChange={update('social_twitter')} placeholder="https://x.com/yourhandle" />
+            </div>
+            <div>
+              <label className="label">YouTube URL</label>
+              <input className="input" value={field('social_youtube')} onChange={update('social_youtube')} placeholder="https://youtube.com/@yourchannel" />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-slate-200 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-slate-700">Affiliate Disclosure Page</h3>
+          <label className="label">Heading</label>
+          <input className="input mb-2" value={field('affiliate_disclosure_heading')} onChange={update('affiliate_disclosure_heading')} placeholder="Affiliate Disclosure" />
+          <label className="label">Body (leave a blank line between paragraphs)</label>
+          <textarea rows={6} className="input" value={field('affiliate_disclosure_body')} onChange={update('affiliate_disclosure_body')} />
+        </div>
+
+        <div className="rounded-lg border border-slate-200 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-slate-700">Disclaimer Page</h3>
+          <label className="label">Heading</label>
+          <input className="input mb-2" value={field('disclaimer_heading')} onChange={update('disclaimer_heading')} placeholder="Disclaimer" />
+          <label className="label">Body (leave a blank line between paragraphs)</label>
+          <textarea rows={6} className="input" value={field('disclaimer_body')} onChange={update('disclaimer_body')} />
+        </div>
+
+        <div className="rounded-lg border border-slate-200 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-slate-700">Cookie Policy Page</h3>
+          <label className="label">Heading</label>
+          <input className="input mb-2" value={field('cookie_heading')} onChange={update('cookie_heading')} placeholder="Cookie Policy" />
+          <label className="label">Body (leave a blank line between paragraphs)</label>
+          <textarea rows={6} className="input" value={field('cookie_body')} onChange={update('cookie_body')} />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button className="btn-primary">Save</button>
+          {siteWideSaved && <span className="text-sm text-green-600">Saved!</span>}
         </div>
       </form>
 
