@@ -31,6 +31,7 @@ app.use('/api/home-sections', require('./routes/homeSections'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/content', require('./routes/content'));   // ← ye naya
 app.use('/api/articles', require('./routes/articles')); // ← Buying Guides / Blog (public)
+app.use('/api/subscribe', require('./routes/subscribe')); // ← Newsletter / deal alerts (public)
 // 404 handler
 app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
 
