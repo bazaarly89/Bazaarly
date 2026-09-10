@@ -88,7 +88,7 @@ router.get('/products', async (req, res) => {
 router.post('/products', async (req, res) => {
   const {
     title, description, shortDescription, categoryId, brand, images = [], tags = [],
-    featured, trending, deal,
+    featured, trending, deal, isRecommended,
     productType = 'own',
     // own-product fields
     price, mrp, stock, sku,
@@ -106,7 +106,7 @@ router.post('/products', async (req, res) => {
     categoryId, brand: brand || '', productType,
     images: images.map((url, i) => ({ url, position: i })),
     attributes,
-    tags, featured: !!featured, trending: !!trending, deal: !!deal,
+    tags, featured: !!featured, trending: !!trending, deal: !!deal, isRecommended: !!isRecommended,
   };
 
   if (productType === 'own') {
@@ -152,7 +152,7 @@ router.post('/products', async (req, res) => {
 router.put('/products/:id', async (req, res) => {
   const {
     title, description, shortDescription, categoryId, brand, isActive, images, tags,
-    featured, trending, deal, productType,
+    featured, trending, deal, isRecommended, productType,
     price, mrp, stock, sku,
     offers, pros, cons, editorScore, comparisonEnabled, attributes,
   } = req.body;
@@ -170,6 +170,7 @@ router.put('/products/:id', async (req, res) => {
   if (featured !== undefined) update.featured = featured;
   if (trending !== undefined) update.trending = trending;
   if (deal !== undefined) update.deal = deal;
+  if (isRecommended !== undefined) update.isRecommended = isRecommended;
   if (productType !== undefined) update.productType = productType;
 
   // own-product fields
