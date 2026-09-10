@@ -14,21 +14,35 @@ export default function ProductListing() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const q = searchParams.get('q') || '';
+  const categoryParam = searchParams.get('category') || '';
   const minPrice = searchParams.get('minPrice') || '';
   const maxPrice = searchParams.get('maxPrice') || '';
   const brand = searchParams.get('brand') || '';
   const rating = searchParams.get('rating') || '';
   const sort = searchParams.get('sort') || '';
+  const deal = searchParams.get('deal') || '';
+  const comparisonEnabled = searchParams.get('comparisonEnabled') || '';
   const page = Number(searchParams.get('page') || 1);
 
   useEffect(() => { Api.brands().then((r) => setBrands(r.brands)); }, []);
 
   useEffect(() => {
     setLoading(true);
-    Api.products({ search: q || undefined, category: slug, minPrice: minPrice || undefined, maxPrice: maxPrice || undefined, brand: brand || undefined, rating: rating || undefined, sort: sort || undefined, page, limit: 12 })
+    Api.products({
+      search: q || undefined,
+      category: slug || categoryParam || undefined,
+      minPrice: minPrice || undefined,
+      maxPrice: maxPrice || undefined,
+      brand: brand || undefined,
+      rating: rating || undefined,
+      sort: sort || undefined,
+      deal: deal || undefined,
+      comparisonEnabled: comparisonEnabled || undefined,
+      page, limit: 12,
+    })
       .then((r) => { setProducts(r.products); setTotal(r.total); setTotalPages(r.totalPages); })
       .finally(() => setLoading(false));
-  }, [slug, q, minPrice, maxPrice, brand, rating, sort, page]);
+  }, [slug, categoryParam, q, minPrice, maxPrice, brand, rating, sort, deal, comparisonEnabled, page]);
 
   const updateParam = (key, value) => {
     const next = new URLSearchParams(searchParams);
