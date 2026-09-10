@@ -77,6 +77,7 @@ siteContent: () => unwrap(api.get('/content')),
   articles: (params) => unwrap(api.get('/articles', { params })),
   article: (slug) => unwrap(api.get(`/articles/${slug}`)),
   articleCategories: () => unwrap(api.get('/articles/categories')),
+  subscribe: (data) => unwrap(api.post('/subscribe', data)),
 
   // cart
   getCart: () => unwrap(api.get('/cart')),
@@ -189,6 +190,7 @@ export const AdminApi = {
   createArticle: (data) => unwrap(adminApi.post('/admin/articles', data)),
   updateArticle: (id, data) => unwrap(adminApi.put(`/admin/articles/${id}`, data)),
   deleteArticle: (id) => unwrap(adminApi.delete(`/admin/articles/${id}`)),
+  subscribers: () => unwrap(adminApi.get('/admin/subscribers')),
 
   salesReport: (params) => unwrap(adminApi.get('/admin/reports/sales', { params })),
   topProducts: () => unwrap(adminApi.get('/admin/reports/top-products')),
