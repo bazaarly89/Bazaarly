@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 const LINKS = [
   ['/admin/dashboard', 'Dashboard'],
   ['/admin/home-sections', 'Homepage Sections'],
+  ['/admin/articles', 'Buying Guides / Blog'],
   ['/admin/products', 'Products'],
   ['/admin/categories', 'Categories'],
   ['/admin/merchants', 'Merchants'],
