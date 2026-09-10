@@ -4,7 +4,11 @@ import { AdminApi } from '../../api/client';
 const LABELS = {
   categories: 'Shop by Category',
   trending: 'Trending Products',
-  deals: "Today's Deals",
+  deals: "Today's Best Deals",
+  budget: 'Best Under Budget',
+  compare: 'Compare Products',
+  buying_guides: 'Buying Guides',
+  tools: 'Free Tools by Dostivox',
   trust_cards: 'Why Choose Us Cards',
 };
 
