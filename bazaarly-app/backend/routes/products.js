@@ -17,9 +17,12 @@ function formatProduct(p, categoryDoc) {
 
 // GET /api/products?search=&category=&minPrice=&maxPrice=&brand=&rating=&sort=&page=&limit=
 router.get('/', async (req, res) => {
-  const { search, category, minPrice, maxPrice, brand, rating, sort, page = 1, limit = 12 } = req.query;
+  const { search, category, minPrice, maxPrice, brand, rating, sort, deal, comparisonEnabled, page = 1, limit = 12 } = req.query;
   const filter = { isActive: true };
   const andConditions = [];
+
+  if (deal === 'true') filter.deal = true;
+  if (comparisonEnabled === 'true') filter.comparisonEnabled = true;
 
   if (search) {
     const regex = new RegExp(search, 'i');
