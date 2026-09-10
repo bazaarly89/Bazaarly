@@ -101,6 +101,10 @@ const productSchema = new mongoose.Schema({
   featured: { type: Boolean, default: false },
   trending: { type: Boolean, default: false },
   deal: { type: Boolean, default: false },
+  // Editorial flag — shows a "Dostivox Recommended" badge on the product
+  // card. Independent of featured/trending/deal (those control homepage
+  // placement; this is a genuine quality/value endorsement).
+  isRecommended: { type: Boolean, default: false },
   rating: { type: Number, default: 0 },
   ratingCount: { type: Number, default: 0 },
 
