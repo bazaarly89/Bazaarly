@@ -6,6 +6,12 @@ import { useAuth } from '../context/AuthContext';
 import { Api } from '../api/client';
 import MerchantBadge from './MerchantBadge';
 
+// Reusable premium product card — used across listing pages, related
+// products, "trending" sections etc. Shows: image, name, brand, price,
+// original price, discount, merchant, a "Dostivox Recommended" badge when
+// the admin has flagged the product, a last-updated date, and a
+// Check Price / View Deal CTA. For affiliate products it also carries a
+// short affiliate disclosure near the CTA — never hidden, never omitted.
 export default function ProductCard({ product }) {
   const { addToCart } = useCart();
   const { user } = useAuth();
@@ -30,6 +36,13 @@ export default function ProductCard({ product }) {
   const discount = isAffiliate
     ? (bestOffer?.discountPercentage || (displayOriginal ? Math.round(((displayOriginal - displayPrice) / displayOriginal) * 100) : 0))
     : Math.round(((product.mrp - product.price) / product.mrp) * 100);
+
+  // Last updated — for affiliate deals this is when the price was last
+  // checked; for own products, when the listing itself was last edited.
+  const lastUpdatedRaw = isAffiliate ? (product.lastChecked || product.updatedAt) : product.updatedAt;
+  const lastUpdated = lastUpdatedRaw
+    ? new Date(lastUpdatedRaw).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null;
 
   const handleAdd = async (e) => {
     e.preventDefault();
@@ -81,7 +94,7 @@ export default function ProductCard({ product }) {
         <div className="absolute inset-x-0 bottom-0 translate-y-full bg-white/95 backdrop-blur px-3 py-2 transition-transform duration-300 group-hover:translate-y-0">
           {isAffiliate ? (
             <button onClick={handleCheckDeal} className="btn-primary w-full text-sm py-2">
-              {bestOffer?.ctaText || 'Check Deal'}
+              {bestOffer?.ctaText || 'View Deal'}
             </button>
           ) : (
             <button onClick={handleAdd} disabled={busy} className="btn-primary w-full text-sm py-2">
@@ -95,6 +108,13 @@ export default function ProductCard({ product }) {
           <p className="text-xs font-semibold uppercase tracking-wide text-brand-500">{product.brand}</p>
           {isAffiliate && bestOffer?.merchant && <MerchantBadge merchant={bestOffer.merchant} logo={bestOffer.merchantLogo} />}
         </div>
+
+        {product.isRecommended && (
+          <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+            ★ Dostivox Recommended
+          </span>
+        )}
+
         <h3 className="mt-1 line-clamp-2 font-medium text-slate-800">{product.title}</h3>
         {!isAffiliate && (
           <div className="mt-1.5"><StarRating value={product.rating} count={product.rating_count} showValue size={14} /></div>
@@ -105,10 +125,21 @@ export default function ProductCard({ product }) {
             <span className="text-sm text-slate-400 line-through">₹{displayOriginal?.toLocaleString()}</span>
           )}
         </div>
+
         {isAffiliate && (
-          <p className="mt-1 text-[11px] text-slate-400">
-            {offers.length > 1 ? `Lowest of ${offers.length} stores` : 'Affiliate link'}
-          </p>
+          <>
+            <p className="mt-1 text-[11px] text-slate-400">
+              {offers.length > 1 ? `Lowest of ${offers.length} stores` : 'Affiliate link'}
+              {lastUpdated && ` · Updated ${lastUpdated}`}
+            </p>
+            {/* Required affiliate disclosure — kept plainly visible, not hidden behind hover. */}
+            <p className="mt-1.5 text-[10px] leading-snug text-slate-400">
+              Affiliate link — we may earn a commission if you purchase through our link.
+            </p>
+          </>
+        )}
+        {!isAffiliate && lastUpdated && (
+          <p className="mt-1 text-[11px] text-slate-400">Updated {lastUpdated}</p>
         )}
       </div>
     </Link>
