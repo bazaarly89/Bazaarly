@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { v4: uuid } = require('uuid');
-const { Product, Category, Merchant, Order, User, Coupon, Banner, Advertisement, Notification, Setting, HeroSlide, TrustCard, NavItem, FooterColumn, FooterLink, HomeSection, Article, ARTICLE_CATEGORIES } = require('../db');
+const { Product, Category, Merchant, Order, User, Coupon, Banner, Advertisement, Notification, Setting, HeroSlide, TrustCard, NavItem, FooterColumn, FooterLink, HomeSection, Article, ARTICLE_CATEGORIES, Subscriber } = require('../db');
 const { adminRequired } = require('../middleware/auth');
 const router = express.Router();
 
@@ -746,6 +746,12 @@ router.put('/articles/:id', async (req, res) => {
 router.delete('/articles/:id', async (req, res) => {
   await Article.findByIdAndDelete(req.params.id);
   res.json({ message: 'Article deleted' });
+});
+
+// ---------------- NEWSLETTER SUBSCRIBERS (read-only) ----------------
+router.get('/subscribers', async (req, res) => {
+  const rows = await Subscriber.find().sort({ createdAt: -1 }).lean();
+  res.json({ subscribers: rows.map((s) => ({ ...s, id: s._id })), total: rows.length });
 });
 
 module.exports = router;
