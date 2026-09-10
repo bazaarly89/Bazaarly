@@ -251,6 +251,18 @@ const settingSchema = new mongoose.Schema({
   value: String,
 });
 
+// ---------------- NEWSLETTER / DEAL ALERT SUBSCRIBERS ----------------
+// One opt-in form (homepage) — email plus which kinds of updates they want.
+// No spam: this only stores intent, sending itself happens outside this app.
+const subscriberSchema = new mongoose.Schema({
+  _id: { type: String, default: uuid },
+  email: { type: String, required: true, unique: true },
+  wantsDeals: { type: Boolean, default: true },
+  wantsGuides: { type: Boolean, default: false },
+  wantsPriceAlerts: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now },
+});
+
 const otpSchema = new mongoose.Schema({
   _id: { type: String, default: uuid },
   email: { type: String, required: true },
@@ -375,6 +387,7 @@ const Banner = mongoose.model('Banner', bannerSchema);
 const Advertisement = mongoose.model('Advertisement', advertisementSchema);
 const Notification = mongoose.model('Notification', notificationSchema);
 const Setting = mongoose.model('Setting', settingSchema);
+const Subscriber = mongoose.model('Subscriber', subscriberSchema);
 const Otp = mongoose.model('Otp', otpSchema);
 const HeroSlide = mongoose.model('HeroSlide', heroSlideSchema);
 const Article = mongoose.model('Article', articleSchema);
@@ -455,6 +468,7 @@ async function seed() {
     await Setting.create({ _id: 'shipping_fee', value: '49' });
     await Setting.create({ _id: 'free_shipping_above', value: '999' });
 
+
     console.log('✅ Demo data seeded (1 own product + 1 affiliate product example)');
   }
 
@@ -471,11 +485,12 @@ async function seed() {
   }
   const trustCardCount = await TrustCard.countDocuments();
   if (trustCardCount === 0) {
+    // Safer, honest claims — never promise something we can't guarantee.
     await TrustCard.create([
-      { icon: '%', title: 'Best Prices', description: 'Guaranteed', position: 0 },
-      { icon: '✓', title: 'Genuine Products', description: '100% Original', position: 1 },
-      { icon: '🚚', title: 'Fast Delivery', description: 'Across India', position: 2 },
-      { icon: '🎧', title: '24/7 Customer Support', description: "We're here to help", position: 3 },
+      { icon: '⚖', title: 'Compare Before You Buy', description: 'See real prices across stores', position: 0 },
+      { icon: '✓', title: 'Curated Recommendations', description: 'Hand-picked, not auto-generated', position: 1 },
+      { icon: '📖', title: 'Useful Buying Guides', description: 'Written to actually help', position: 2 },
+      { icon: '🔗', title: 'Transparent Affiliate Links', description: 'Clearly disclosed, always', position: 3 },
     ]);
     console.log('✅ Trust cards seeded');
   }
@@ -484,10 +499,26 @@ async function seed() {
     await HomeSection.create([
       { key: 'categories', title: 'Shop by Category', subtitle: '', buttonText: '', buttonLink: '', isEnabled: true, position: 0 },
       { key: 'trending', title: 'Trending Products', subtitle: '', buttonText: 'View All ›', buttonLink: '/products', isEnabled: true, position: 1 },
-      { key: 'deals', title: "Today's Deals", subtitle: '', buttonText: 'View All ›', buttonLink: '/products?sort=price_asc', isEnabled: true, position: 2 },
-      { key: 'trust_cards', title: 'Why Choose Dostivox?', subtitle: '', buttonText: '', buttonLink: '', isEnabled: true, position: 3 },
+      { key: 'deals', title: "Today's Best Deals", subtitle: '', buttonText: 'View All ›', buttonLink: '/products?sort=price_asc', isEnabled: true, position: 2 },
+      { key: 'budget', title: 'Best Under Budget', subtitle: '', buttonText: '', buttonLink: '', isEnabled: true, position: 3 },
+      { key: 'compare', title: 'Compare Products', subtitle: 'Weigh real options side by side before you buy.', buttonText: 'Compare Products', buttonLink: '/products?comparisonEnabled=true', isEnabled: true, position: 4 },
+      { key: 'buying_guides', title: 'Buying Guides', subtitle: '', buttonText: 'View All ›', buttonLink: '/blog?category=Buying%20Guides', isEnabled: true, position: 5 },
+      { key: 'tools', title: 'Free Tools by Dostivox', subtitle: '', buttonText: '', buttonLink: '', isEnabled: true, position: 6 },
+      { key: 'trust_cards', title: 'Why Choose Dostivox?', subtitle: '', buttonText: '', buttonLink: '', isEnabled: true, position: 7 },
     ]);
     console.log('✅ Homepage sections seeded');
+  } else {
+    // Existing site — add any NEW section keys introduced later without
+    // touching sections the admin may have already customized.
+    const NEW_SECTION_DEFAULTS = [
+      { key: 'budget', title: 'Best Under Budget', subtitle: '', buttonText: '', buttonLink: '', isEnabled: true, position: 10 },
+      { key: 'compare', title: 'Compare Products', subtitle: 'Weigh real options side by side before you buy.', buttonText: 'Compare Products', buttonLink: '/products?comparisonEnabled=true', isEnabled: true, position: 11 },
+      { key: 'buying_guides', title: 'Buying Guides', subtitle: '', buttonText: 'View All ›', buttonLink: '/blog?category=Buying%20Guides', isEnabled: true, position: 12 },
+      { key: 'tools', title: 'Free Tools by Dostivox', subtitle: '', buttonText: '', buttonLink: '', isEnabled: true, position: 13 },
+    ];
+    for (const def of NEW_SECTION_DEFAULTS) {
+      await HomeSection.findOneAndUpdate({ key: def.key }, { $setOnInsert: def }, { upsert: true });
+    }
   }
 
   const navCount = await NavItem.countDocuments();
@@ -570,6 +601,24 @@ async function seed() {
     });
     console.log('✅ Sample buying-guide article seeded (edit/replace from Admin → Buying Guides)');
   }
+
+  // Homepage hero / search copy — added for the redesigned single-hero
+  // homepage. Uses upsert-if-missing so it fills in on both fresh installs
+  // AND existing sites, without ever overwriting text an admin already
+  // customized via Admin → Settings.
+  const HERO_DEFAULTS = {
+    home_hero_badge: 'Smart Shopping',
+    home_hero_title: 'Shop Smarter. Compare Better. Save More.',
+    home_hero_subtitle: 'Discover the best products, deals and buying recommendations in one place.',
+    home_hero_cta1_text: 'Explore Deals',
+    home_hero_cta1_link: '/products?deal=true',
+    home_hero_cta2_text: 'Compare Products',
+    home_hero_cta2_link: '/products?comparisonEnabled=true',
+    home_search_placeholder: 'What are you looking for?',
+  };
+  for (const [key, value] of Object.entries(HERO_DEFAULTS)) {
+    await Setting.findOneAndUpdate({ _id: key }, { $setOnInsert: { _id: key, value } }, { upsert: true });
+  }
 }
 
 seed().catch((err) => console.error('Seeding failed:', err));
@@ -577,5 +626,5 @@ seed().catch((err) => console.error('Seeding failed:', err));
 module.exports = {
   User, Address, Category, Merchant, Product, Review, Wishlist, CartItem,
   Coupon, Order, Banner, Advertisement, Notification, Setting, Otp, HeroSlide, Article, TrustCard,
-  NavItem, FooterColumn, FooterLink, HomeSection, ARTICLE_CATEGORIES,
+  NavItem, FooterColumn, FooterLink, HomeSection, ARTICLE_CATEGORIES, Subscriber,
 };
