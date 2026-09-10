@@ -1,13 +1,40 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Api } from '../api/client';
+
+// Social links only render if the admin has actually set a URL for them
+// (Settings → social_instagram / social_facebook / social_twitter / social_youtube).
+const SOCIAL_KEYS = [
+  { key: 'social_instagram', label: 'Instagram' },
+  { key: 'social_facebook', label: 'Facebook' },
+  { key: 'social_twitter', label: 'X / Twitter' },
+  { key: 'social_youtube', label: 'YouTube' },
+];
 
 export default function Footer() {
+  const [social, setSocial] = useState({});
+
+  useEffect(() => {
+    Api.siteContent().then(({ content }) => setSocial(content || {})).catch(() => {});
+  }, []);
+
+  const activeSocial = SOCIAL_KEYS.filter((s) => social[s.key]);
+
   return (
     <footer className="mt-20 border-t border-slate-100 bg-white">
-      <div className="container-app grid grid-cols-2 gap-8 py-12 md:grid-cols-4">
+      <div className="container-app grid grid-cols-2 gap-8 py-12 md:grid-cols-5">
         <div className="col-span-2 md:col-span-1">
           <h4 className="font-display text-xl font-bold text-brand-600">Dostivox</h4>
           <p className="mt-3 text-sm text-slate-500">Premium products, thoughtfully curated. Fast delivery, easy returns, and a shopping experience you'll love.</p>
+          {activeSocial.length > 0 && (
+            <div className="mt-4 flex gap-3">
+              {activeSocial.map((s) => (
+                <a key={s.key} href={social[s.key]} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-slate-500 hover:text-brand-600">
+                  {s.label}
+                </a>
+              ))}
+            </div>
+          )}
         </div>
         <div>
           <h5 className="font-semibold text-slate-800">Shop</h5>
@@ -32,6 +59,15 @@ export default function Footer() {
             <li><Link to="/about" className="hover:text-brand-600">About Us</Link></li>
             <li><Link to="/privacy" className="hover:text-brand-600">Privacy Policy</Link></li>
             <li><Link to="/terms" className="hover:text-brand-600">Terms of Service</Link></li>
+          </ul>
+        </div>
+        <div>
+          <h5 className="font-semibold text-slate-800">Legal</h5>
+          <ul className="mt-3 space-y-2 text-sm text-slate-500">
+            <li><Link to="/affiliate-disclosure" className="hover:text-brand-600">Affiliate Disclosure</Link></li>
+            <li><Link to="/disclaimer" className="hover:text-brand-600">Disclaimer</Link></li>
+            <li><Link to="/cookie-policy" className="hover:text-brand-600">Cookie Policy</Link></li>
+            <li><Link to="/sitemap" className="hover:text-brand-600">Sitemap</Link></li>
           </ul>
         </div>
       </div>
