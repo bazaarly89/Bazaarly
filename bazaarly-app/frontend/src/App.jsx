@@ -22,6 +22,8 @@ import About from './pages/About';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import HelpCenter from './pages/HelpCenter';
+import Blog from './pages/Blog';
+import ArticleDetails from './pages/ArticleDetails';
 import NotFound from './pages/NotFound';
 
 // Admin pages
@@ -45,6 +47,7 @@ import AdminTrustCards from './pages/admin/AdminTrustCards';
 import AdminHomeSections from './pages/admin/AdminHomeSections';
 import AdminNavigation from './pages/admin/AdminNavigation';
 import AdminFooter from './pages/admin/AdminFooter';
+import AdminArticles from './pages/admin/AdminArticles';
 
 export default function App() {
   return (
@@ -70,6 +73,7 @@ export default function App() {
         <Route path="home-sections" element={<AdminHomeSections />} />
         <Route path="navigation" element={<AdminNavigation />} />
         <Route path="footer" element={<AdminFooter />} />
+        <Route path="articles" element={<AdminArticles />} />
       </Route>
 
       {/* Public / customer-facing routes */}
@@ -79,6 +83,8 @@ export default function App() {
       <Route path="/products" element={<Layout><ProductListing /></Layout>} />
       <Route path="/products/:slug" element={<Layout><ProductDetails /></Layout>} />
       <Route path="/search" element={<Layout><Search /></Layout>} />
+      <Route path="/blog" element={<Layout><Blog /></Layout>} />
+      <Route path="/blog/:slug" element={<Layout><ArticleDetails /></Layout>} />
       <Route path="/cart" element={<Layout><Cart /></Layout>} />
       <Route path="/checkout" element={<Layout><RequireAuth><Checkout /></RequireAuth></Layout>} />
       <Route path="/login" element={<Layout><Login /></Layout>} />
