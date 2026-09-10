@@ -322,25 +322,38 @@ const trustCardSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true },
 });
 
-// ---------------- NEW: BUYING GUIDES / ARTICLES ----------------
+// ---------------- BUYING GUIDES / BLOG ARTICLES ----------------
+// Fixed category list used everywhere (admin form, public filters, seed data).
+// Exported below as ARTICLE_CATEGORIES so routes/frontend never hardcode it twice.
+const ARTICLE_CATEGORIES = ['Buying Guides', 'Comparisons', 'How-To', 'Deals', 'Tech', 'Gaming', 'Creator', 'AI & Tools'];
+
+const articleFaqSchema = new mongoose.Schema({
+  question: { type: String, required: true },
+  answer: { type: String, required: true },
+}, { _id: false });
+
 const articleSchema = new mongoose.Schema({
   _id: { type: String, default: uuid },
   title: { type: String, required: true },
   slug: { type: String, required: true, unique: true },
   featuredImage: String,
-  author: String,
-  category: String, // Buying Guides | Comparisons | How-To | Deals | Tech | Gaming | Creator | AI & Tools
-  content: String,
-  faq: [{ question: String, answer: String }],
+  author: { type: String, default: 'Dostivox Team' },
+  category: { type: String, enum: ARTICLE_CATEGORIES, default: 'Buying Guides' },
+  content: { type: String, default: '' }, // rich HTML from the admin editor
+  faq: [articleFaqSchema],
   relatedProductIds: [{ type: String, ref: 'Product' }],
+  // SEO — every field admin-editable, all optional (sensible defaults applied on save)
   seoTitle: String,
   seoDescription: String,
   canonicalUrl: String,
   ogImage: String,
   isPublished: { type: Boolean, default: true },
   publishedAt: { type: Date, default: Date.now },
+  createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
+articleSchema.index({ category: 1, isPublished: 1, publishedAt: -1 });
+articleSchema.index({ title: 'text', content: 'text', seoDescription: 'text' });
 
 // ---------------- MODELS ----------------
 
@@ -519,6 +532,40 @@ async function seed() {
     await Merchant.create([{ name: 'Amazon' }, { name: 'Flipkart' }]);
     console.log('✅ Starter merchants seeded (Amazon, Flipkart — add logos from Admin → Merchants)');
   }
+
+  // One real, substantive example article so /blog isn't empty on first run.
+  // Admins should replace/expand this — see the SEO note in the admin Articles
+  // page about writing genuinely useful, non-thin content.
+  if ((await Article.countDocuments()) === 0) {
+    await Article.create({
+      title: 'How to Choose the Right Wireless Headphones in 2026',
+      slug: 'how-to-choose-wireless-headphones-2026',
+      featuredImage: 'https://picsum.photos/seed/headphones-guide/1200/675',
+      author: 'Dostivox Team',
+      category: 'Buying Guides',
+      content: `<h2>Start with how you'll actually use them</h2>
+<p>The "best" headphones depend entirely on your use case. Commuting on noisy trains calls for strong active noise cancellation (ANC). Working out needs a secure, sweat-resistant fit. Working from home all day rewards comfort over almost everything else.</p>
+<h2>Battery life and charging</h2>
+<p>Look for at least 20-30 hours of battery on a single charge if you travel often, and fast-charge support (5 minutes of charging for 1-2 hours of playback) for emergencies.</p>
+<h2>Sound signature</h2>
+<p>Bass-heavy tuning suits pop, hip-hop and EDM; a flatter, more neutral signature suits podcasts, classical and mixing/production work. Try to check an EQ-adjustable model if you're unsure what you prefer.</p>
+<h2>Comfort for long sessions</h2>
+<p>Over-ear headphones are generally more comfortable for multi-hour use than in-ear buds, but they're bulkier to carry. If you wear glasses, look for softer earcup padding to avoid pressure points.</p>
+<h2>Our recommendation</h2>
+<p>For most people, a mid-range over-ear pair with ANC, 25+ hour battery life and a companion app for EQ tuning offers the best balance of comfort, sound and price. Check the comparison table below for current top picks.</p>`,
+      faq: [
+        { question: 'Do I really need active noise cancellation?', answer: 'If you commute, fly often, or work in a noisy environment, ANC makes a noticeable difference. For quiet home use, it matters less and you can save money by skipping it.' },
+        { question: 'Are expensive headphones always better?', answer: 'Not necessarily. Sound quality gains flatten out significantly above the mid-range price tier — you\'re often paying more for brand, build materials and extra features like multipoint Bluetooth.' },
+        { question: 'Bluetooth or wired — which lasts longer?', answer: 'Wired headphones have no battery to degrade over time, but Bluetooth models offer far more convenience. If longevity matters most, check whether the Bluetooth model also supports a wired fallback cable.' },
+      ],
+      seoTitle: 'How to Choose the Right Wireless Headphones in 2026 — Buying Guide',
+      seoDescription: 'A practical guide to picking wireless headphones: battery life, ANC, comfort and sound signature explained, with our current top pick.',
+      canonicalUrl: '',
+      ogImage: '',
+      isPublished: true,
+    });
+    console.log('✅ Sample buying-guide article seeded (edit/replace from Admin → Buying Guides)');
+  }
 }
 
 seed().catch((err) => console.error('Seeding failed:', err));
@@ -526,5 +573,5 @@ seed().catch((err) => console.error('Seeding failed:', err));
 module.exports = {
   User, Address, Category, Merchant, Product, Review, Wishlist, CartItem,
   Coupon, Order, Banner, Advertisement, Notification, Setting, Otp, HeroSlide, Article, TrustCard,
-  NavItem, FooterColumn, FooterLink, HomeSection,
+  NavItem, FooterColumn, FooterLink, HomeSection, ARTICLE_CATEGORIES,
 };
