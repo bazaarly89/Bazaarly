@@ -45,20 +45,23 @@ export default function Navbar() {
 
         <form onSubmit={submitSearch} className="ml-auto hidden md:flex flex-1 max-w-md items-center">
           <div className="relative w-full">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+            </span>
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search for products, brands..."
-              className="w-full rounded-full border border-slate-200 bg-slate-50 py-2.5 pl-4 pr-10 text-sm focus:outline-none focus:border-brand-400"
+              className="w-full rounded-full border border-slate-200 bg-slate-50 py-2.5 pl-11 pr-11 text-sm shadow-sm transition focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-100"
             />
-            <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 grid h-8 w-8 place-items-center" aria-label="Search">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+            <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 grid h-8 w-8 place-items-center rounded-full bg-brand-500 text-white transition hover:bg-brand-600" aria-label="Search">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
             </button>
           </div>
         </form>
 
         <div className="ml-auto md:ml-4 flex items-center gap-4">
-          <Link to="/wishlist" className="hidden sm:inline-flex text-slate-600 hover:text-accent-500" aria-label="Wishlist">
+          <Link to="/wishlist" className="relative text-slate-600 hover:text-accent-500" aria-label="Wishlist">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 21s-7-4.35-9.5-8.5C1 9 2.5 6 5.5 6c2 0 3.3 1.2 4 2.2C10.2 7.2 11.5 6 13.5 6 16.5 6 18 9 21 12.5 18.5 16.65 12 21 12 21z" /></svg>
           </Link>
           <Link to="/cart" className="relative text-slate-600 hover:text-brand-600" aria-label="Cart">
@@ -83,16 +86,19 @@ export default function Navbar() {
 
       {/* Always-visible search bar on mobile — sits below the main row,
           not hidden inside the hamburger menu */}
-      <form onSubmit={submitSearch} className="md:hidden border-t border-slate-100 px-4 py-2.5">
+      <form onSubmit={submitSearch} className="md:hidden border-t border-slate-100 bg-slate-50/60 px-4 py-3">
         <div className="relative w-full">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+          </span>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search for products, brands..."
-            className="w-full rounded-full border border-slate-200 bg-slate-50 py-2.5 pl-4 pr-10 text-sm focus:outline-none focus:border-brand-400"
+            className="w-full rounded-full border border-slate-200 bg-white py-3 pl-11 pr-12 text-sm shadow-sm transition focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-100"
           />
-          <button type="submit" className="absolute right-1 top-1/2 -translate-y-1/2 grid h-8 w-8 place-items-center" aria-label="Search">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
+          <button type="submit" className="absolute right-1.5 top-1/2 -translate-y-1/2 grid h-9 w-9 place-items-center rounded-full bg-brand-500 text-white transition hover:bg-brand-600" aria-label="Search">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
           </button>
         </div>
       </form>
