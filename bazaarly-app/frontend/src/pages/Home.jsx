@@ -20,6 +20,7 @@ export default function Home() {
   const [tools, setTools] = useState([]);
   const [heroSlides, setHeroSlides] = useState([]);
   const [heroIndex, setHeroIndex] = useState(0);
+  const [showMoreLinks, setShowMoreLinks] = useState(false);
 
   const [budgetTier, setBudgetTier] = useState(BUDGET_TIERS[1]);
   const [budgetProducts, setBudgetProducts] = useState([]);
@@ -121,103 +122,107 @@ export default function Home() {
       />
 
       {/* ---------------- HERO ---------------- */}
-      {heroSlides.length > 0 ? (
-        <section className="relative overflow-hidden" onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd}>
-          {heroSlides.map((slide, i) => (
-            <div
-              key={slide.id}
-              className={`relative text-white transition-opacity duration-700 ${i === heroIndex ? 'block opacity-100' : 'hidden opacity-0'}`}
-            >
-              <div className="relative aspect-[4/5] w-full overflow-hidden bg-slate-900 sm:aspect-[21/9]">
-                {slide.image && (
-                  <img
-                    src={slide.image}
-                    alt={slide.title || 'Dostivox'}
-                    className={`h-full w-full ${slide.imageFit === 'contain' ? 'object-contain' : 'object-cover'}`}
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
-                <div className="container-app absolute inset-0 flex flex-col justify-end px-4 pb-8 sm:justify-center sm:pb-0">
-                  <div className="max-w-lg">
-                    {slide.eyebrow && (
-                      <span className="inline-block rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide backdrop-blur">
-                        {slide.eyebrow}
-                      </span>
-                    )}
-                    {slide.title && <h1 className="mt-3 font-display text-2xl font-bold leading-tight sm:text-4xl">{slide.title}</h1>}
-                    {slide.subtitle && <p className="mt-2 text-sm text-white/85 sm:text-base">{slide.subtitle}</p>}
-                    {slide.specs?.length > 0 && (
-                      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/80">
-                        {slide.specs.map((sp, idx) => <li key={idx}>• {sp}</li>)}
-                      </ul>
-                    )}
-                    <div className="mt-5 flex flex-wrap gap-3">
-                      <a href={slide.ctaLink || c('home_hero_cta1_link', '/products?deal=true')} className="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-brand-700 shadow-lg transition hover:-translate-y-0.5">
-                        {slide.ctaText || c('home_hero_cta1_text', 'Explore Deals')}
-                      </a>
-                      <a href={c('home_hero_cta2_link', '/products?comparisonEnabled=true')} className="rounded-full border border-white/40 bg-white/10 px-6 py-2.5 text-sm font-semibold backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20">
-                        {c('home_hero_cta2_text', 'Compare Products')}
-                      </a>
+      <div className="container-app pt-4">
+        {heroSlides.length > 0 ? (
+          <section
+            className="relative overflow-hidden rounded-3xl shadow-card"
+            onTouchStart={handleHeroTouchStart}
+            onTouchEnd={handleHeroTouchEnd}
+          >
+            {heroSlides.map((slide, i) => (
+              <div
+                key={slide.id}
+                className={`relative text-white transition-opacity duration-700 ${i === heroIndex ? 'block opacity-100' : 'hidden opacity-0'}`}
+              >
+                <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-900 sm:aspect-[21/9]">
+                  {slide.image && (
+                    <img
+                      src={slide.image}
+                      alt={slide.title || 'Dostivox'}
+                      className={`h-full w-full ${slide.imageFit === 'contain' ? 'object-contain' : 'object-cover'}`}
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
+                  <div className="absolute inset-0 flex flex-col justify-end p-5 sm:p-10">
+                    <div className="max-w-lg">
+                      {slide.eyebrow && (
+                        <span className="inline-block rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide backdrop-blur">
+                          {slide.eyebrow}
+                        </span>
+                      )}
+                      {slide.title && <h1 className="mt-3 font-display text-xl font-bold leading-tight sm:text-4xl">{slide.title}</h1>}
+                      {slide.subtitle && <p className="mt-2 text-xs text-white/85 sm:text-base">{slide.subtitle}</p>}
+                      {slide.specs?.length > 0 && (
+                        <ul className="mt-3 hidden flex-wrap gap-x-4 gap-y-1 text-xs text-white/80 sm:flex">
+                          {slide.specs.map((sp, idx) => <li key={idx}>• {sp}</li>)}
+                        </ul>
+                      )}
+                      <div className="mt-4 flex flex-wrap gap-2 sm:mt-5 sm:gap-3">
+                        <a href={slide.ctaLink || c('home_hero_cta1_link', '/products?deal=true')} className="rounded-full bg-white px-5 py-2 text-xs font-semibold text-brand-700 shadow-lg transition hover:-translate-y-0.5 sm:px-6 sm:py-2.5 sm:text-sm">
+                          {slide.ctaText || c('home_hero_cta1_text', 'Explore Deals')}
+                        </a>
+                        <a href={c('home_hero_cta2_link', '/products?comparisonEnabled=true')} className="rounded-full border border-white/40 bg-white/10 px-5 py-2 text-xs font-semibold backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20 sm:px-6 sm:py-2.5 sm:text-sm">
+                          {c('home_hero_cta2_text', 'Compare Products')}
+                        </a>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-          {heroSlides.length > 1 && (
-            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
-              {heroSlides.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setHeroIndex(i)}
-                  aria-label={`Show slide ${i + 1}`}
-                  className={`h-1.5 rounded-full transition-all ${i === heroIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/50'}`}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-      ) : (
-        <section
-          className="relative overflow-hidden px-4 py-12 text-white sm:py-16"
-          style={{ background: `linear-gradient(135deg, ${c('home_hero_bg_from', '#2c31ab')}, ${c('home_hero_bg_to', '#4a5cf0')})` }}
-        >
-          <div className="container-app relative text-center">
-            {c('home_hero_badge') && (
-              <span className="inline-block rounded-full bg-white/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide backdrop-blur">
-                {c('home_hero_badge')}
-              </span>
+            ))}
+            {heroSlides.length > 1 && (
+              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+                {heroSlides.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setHeroIndex(i)}
+                    aria-label={`Show slide ${i + 1}`}
+                    className={`h-1.5 rounded-full transition-all ${i === heroIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/50'}`}
+                  />
+                ))}
+              </div>
             )}
-            <h1
-              className="mx-auto mt-4 max-w-2xl font-display text-3xl font-bold leading-tight sm:text-4xl"
-              dangerouslySetInnerHTML={{ __html: c('home_hero_title', 'Shop Smarter. Compare Better. Save More.') }}
-            />
-            <p className="mx-auto mt-3 max-w-lg text-sm text-white/85 sm:text-base">
-              {c('home_hero_subtitle', 'Discover the best products, deals and buying recommendations in one place.')}
-            </p>
-            <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <a href={c('home_hero_cta1_link', '/products?deal=true')} className="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-brand-700 shadow-lg transition hover:-translate-y-0.5">
-                {c('home_hero_cta1_text', 'Explore Deals')}
-              </a>
-              <a href={c('home_hero_cta2_link', '/products?comparisonEnabled=true')} className="rounded-full border border-white/40 bg-white/10 px-6 py-2.5 text-sm font-semibold backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20">
-                {c('home_hero_cta2_text', 'Compare Products')}
-              </a>
+          </section>
+        ) : (
+          <section
+            className="relative overflow-hidden rounded-3xl px-5 py-10 text-white shadow-card sm:px-10 sm:py-16"
+            style={{ background: `linear-gradient(135deg, ${c('home_hero_bg_from', '#2c31ab')}, ${c('home_hero_bg_to', '#4a5cf0')})` }}
+          >
+            <div className="relative text-center">
+              {c('home_hero_badge') && (
+                <span className="inline-block rounded-full bg-white/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide backdrop-blur">
+                  {c('home_hero_badge')}
+                </span>
+              )}
+              <h1
+                className="mx-auto mt-4 max-w-2xl font-display text-2xl font-bold leading-tight sm:text-4xl"
+                dangerouslySetInnerHTML={{ __html: c('home_hero_title', 'Shop Smarter. Compare Better. Save More.') }}
+              />
+              <p className="mx-auto mt-3 max-w-lg text-sm text-white/85 sm:text-base">
+                {c('home_hero_subtitle', 'Discover the best products, deals and buying recommendations in one place.')}
+              </p>
+              <div className="mt-6 flex flex-wrap justify-center gap-3">
+                <a href={c('home_hero_cta1_link', '/products?deal=true')} className="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-brand-700 shadow-lg transition hover:-translate-y-0.5">
+                  {c('home_hero_cta1_text', 'Explore Deals')}
+                </a>
+                <a href={c('home_hero_cta2_link', '/products?comparisonEnabled=true')} className="rounded-full border border-white/40 bg-white/10 px-6 py-2.5 text-sm font-semibold backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20">
+                  {c('home_hero_cta2_text', 'Compare Products')}
+                </a>
+              </div>
             </div>
-          </div>
-        </section>
-      )}
+          </section>
+        )}
+      </div>
 
       {/* ---------------- QUICK LINKS ---------------- */}
       <section className="border-b border-slate-100 bg-white px-4 py-5">
         <div className="container-app">
-          <div className="flex gap-3 overflow-x-auto pb-1 sm:justify-center sm:flex-wrap sm:overflow-visible">
+          <div className="flex flex-wrap gap-3 sm:justify-center">
             {[
-              { to: '/products?deal=true', label: 'Deals', icon: '🔥' },
               { to: '/products?comparisonEnabled=true', label: 'Compare', icon: '⚖️' },
-              { to: '/blog', label: 'Buying Guides', icon: '📖' },
+              { to: '/blog?category=Tech', label: 'News', icon: '📰' },
               { to: '/categories', label: 'Categories', icon: '🗂️' },
               { to: '/#tools', label: 'Free Tools', icon: '🛠️' },
-              { to: '/products', label: 'All Products', icon: '🛍️' },
             ].map((item) => (
               <Link
                 key={item.label}
@@ -228,6 +233,28 @@ export default function Home() {
                 <span className="text-sm font-semibold text-slate-700 whitespace-nowrap">{item.label}</span>
               </Link>
             ))}
+
+            {showMoreLinks && [
+              { to: '/products?deal=true', label: 'Deals', icon: '🔥' },
+              { to: '/blog?category=Buying%20Guides', label: 'Buying Guides', icon: '📖' },
+              { to: '/products', label: 'Shop', icon: '🛍️' },
+            ].map((item) => (
+              <Link
+                key={item.label}
+                to={item.to}
+                className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-100 bg-white px-4 py-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-cardHover"
+              >
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-50 text-base">{item.icon}</span>
+                <span className="text-sm font-semibold text-slate-700 whitespace-nowrap">{item.label}</span>
+              </Link>
+            ))}
+
+            <button
+              onClick={() => setShowMoreLinks((v) => !v)}
+              className="flex shrink-0 items-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-semibold text-slate-500 transition hover:border-brand-300 hover:text-brand-600"
+            >
+              {showMoreLinks ? 'View Less ‹' : 'View More ›'}
+            </button>
           </div>
         </div>
       </section>
