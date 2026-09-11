@@ -18,6 +18,7 @@ export default function Home() {
 
   const [tools, setTools] = useState([]);
   const [heroSlides, setHeroSlides] = useState([]);
+  const [heroLoaded, setHeroLoaded] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
   const [showMoreLinks, setShowMoreLinks] = useState(false);
 
@@ -76,7 +77,9 @@ export default function Home() {
 
     Api.heroSlides().then((r) => {
       if (mounted) setHeroSlides(r.slides || []);
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => {
+      if (mounted) setHeroLoaded(true);
+    });
 
     return () => { mounted = false; };
   }, []);
@@ -138,7 +141,12 @@ export default function Home() {
 
       {/* ---------------- HERO ---------------- */}
       <div className="container-app pt-4">
-        {heroSlides.length > 0 ? (
+        {!heroLoaded ? (
+          // Neutral skeleton while we find out whether admin-configured hero
+          // slides exist — avoids flashing the plain gradient hero and then
+          // swapping to the photo slideshow (or vice versa) once data lands.
+          <div className="aspect-[16/10] w-full animate-pulse rounded-3xl bg-slate-100 sm:aspect-[21/9]" />
+        ) : heroSlides.length > 0 ? (
           <section
             className="relative overflow-hidden rounded-3xl shadow-card"
             onTouchStart={handleHeroTouchStart}
