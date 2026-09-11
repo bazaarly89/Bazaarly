@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Api } from '../api/client';
 import ProductCard from '../components/ProductCard';
@@ -17,13 +17,13 @@ export default function Home() {
   const [content, setContent] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [tools, setTools] = useState([]);
+  const [heroSlides, setHeroSlides] = useState([]);
+  const [heroIndex, setHeroIndex] = useState(0);
 
   const [budgetTier, setBudgetTier] = useState(BUDGET_TIERS[1]);
   const [budgetProducts, setBudgetProducts] = useState([]);
   const [budgetLoading, setBudgetLoading] = useState(false);
-
-  const [tools, setTools] = useState([]);
 
   const [subEmail, setSubEmail] = useState('');
   const [subPrefs, setSubPrefs] = useState({ wantsDeals: true, wantsGuides: false, wantsPriceAlerts: false });
@@ -40,7 +40,8 @@ export default function Home() {
       Api.trustCards().catch(() => ({ cards: [] })),
       Api.homeSections().catch(() => ({ sections: [] })),
       Api.siteContent().catch(() => ({ content: {} })),
-    ]).then(([catRes, trendRes, dealRes, cmpRes, guideRes, trustRes, sectionRes, contentRes]) => {
+      Api.heroSlides().catch(() => ({ slides: [] })),
+    ]).then(([catRes, trendRes, dealRes, cmpRes, guideRes, trustRes, sectionRes, contentRes, heroRes]) => {
       if (!mounted) return;
       setCategories((catRes.categories || []).filter((c) => c.is_active !== false && c.is_active !== 0));
       setTrending(trendRes.products || []);
@@ -50,6 +51,7 @@ export default function Home() {
       setTrustCards(trustRes.cards || []);
       setHomeSections(sectionRes.sections || []);
       setContent(contentRes.content || {});
+      setHeroSlides(heroRes.slides || []);
       try {
         const parsedTools = JSON.parse(contentRes.content?.home_tools || '[]');
         setTools(Array.isArray(parsedTools) ? parsedTools : []);
@@ -58,6 +60,25 @@ export default function Home() {
     });
     return () => { mounted = false; };
   }, []);
+
+  // Auto-rotate the hero carousel every 6s when the admin has added slides
+  useEffect(() => {
+    if (heroSlides.length < 2) return;
+    const id = setInterval(() => setHeroIndex((i) => (i + 1) % heroSlides.length), 6000);
+    return () => clearInterval(id);
+  }, [heroSlides.length]);
+
+  // Swipe support — lets people drag the hero slide left/right with a finger
+  const touchStartX = useRef(null);
+  const handleHeroTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+  const handleHeroTouchEnd = (e) => {
+    if (touchStartX.current === null || heroSlides.length < 2) return;
+    const diff = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(diff) > 40) {
+      setHeroIndex((i) => (diff < 0 ? (i + 1) % heroSlides.length : (i - 1 + heroSlides.length) % heroSlides.length));
+    }
+    touchStartX.current = null;
+  };
 
   useEffect(() => {
     setBudgetLoading(true);
@@ -72,12 +93,6 @@ export default function Home() {
   const sectionOrder = homeSections.length
     ? [...homeSections].sort((a, b) => a.position - b.position).map((s) => s.key)
     : ['categories', 'trending', 'deals', 'budget', 'compare', 'buying_guides', 'tools', 'trust_cards'];
-
-  const submitSearch = (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    window.location.href = `/search?q=${encodeURIComponent(searchQuery.trim())}`;
-  };
 
   const submitSubscribe = async (e) => {
     e.preventDefault();
@@ -106,49 +121,115 @@ export default function Home() {
       />
 
       {/* ---------------- HERO ---------------- */}
-      <section
-        className="relative overflow-hidden px-4 py-12 text-white sm:py-16"
-        style={{ background: `linear-gradient(135deg, ${c('home_hero_bg_from', '#2c31ab')}, ${c('home_hero_bg_to', '#4a5cf0')})` }}
-      >
-        <div className="container-app relative text-center">
-          {c('home_hero_badge') && (
-            <span className="inline-block rounded-full bg-white/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide backdrop-blur">
-              {c('home_hero_badge')}
-            </span>
+      {heroSlides.length > 0 ? (
+        <section className="relative overflow-hidden" onTouchStart={handleHeroTouchStart} onTouchEnd={handleHeroTouchEnd}>
+          {heroSlides.map((slide, i) => (
+            <div
+              key={slide.id}
+              className={`relative text-white transition-opacity duration-700 ${i === heroIndex ? 'block opacity-100' : 'hidden opacity-0'}`}
+            >
+              <div className="relative aspect-[4/5] w-full overflow-hidden bg-slate-900 sm:aspect-[21/9]">
+                {slide.image && (
+                  <img
+                    src={slide.image}
+                    alt={slide.title || 'Dostivox'}
+                    className={`h-full w-full ${slide.imageFit === 'contain' ? 'object-contain' : 'object-cover'}`}
+                  />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
+                <div className="container-app absolute inset-0 flex flex-col justify-end px-4 pb-8 sm:justify-center sm:pb-0">
+                  <div className="max-w-lg">
+                    {slide.eyebrow && (
+                      <span className="inline-block rounded-full bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide backdrop-blur">
+                        {slide.eyebrow}
+                      </span>
+                    )}
+                    {slide.title && <h1 className="mt-3 font-display text-2xl font-bold leading-tight sm:text-4xl">{slide.title}</h1>}
+                    {slide.subtitle && <p className="mt-2 text-sm text-white/85 sm:text-base">{slide.subtitle}</p>}
+                    {slide.specs?.length > 0 && (
+                      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/80">
+                        {slide.specs.map((sp, idx) => <li key={idx}>• {sp}</li>)}
+                      </ul>
+                    )}
+                    <div className="mt-5 flex flex-wrap gap-3">
+                      <a href={slide.ctaLink || c('home_hero_cta1_link', '/products?deal=true')} className="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-brand-700 shadow-lg transition hover:-translate-y-0.5">
+                        {slide.ctaText || c('home_hero_cta1_text', 'Explore Deals')}
+                      </a>
+                      <a href={c('home_hero_cta2_link', '/products?comparisonEnabled=true')} className="rounded-full border border-white/40 bg-white/10 px-6 py-2.5 text-sm font-semibold backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20">
+                        {c('home_hero_cta2_text', 'Compare Products')}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+          {heroSlides.length > 1 && (
+            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+              {heroSlides.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setHeroIndex(i)}
+                  aria-label={`Show slide ${i + 1}`}
+                  className={`h-1.5 rounded-full transition-all ${i === heroIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/50'}`}
+                />
+              ))}
+            </div>
           )}
-          <h1
-            className="mx-auto mt-4 max-w-2xl font-display text-3xl font-bold leading-tight sm:text-4xl"
-            dangerouslySetInnerHTML={{ __html: c('home_hero_title', 'Shop Smarter. Compare Better. Save More.') }}
-          />
-          <p className="mx-auto mt-3 max-w-lg text-sm text-white/85 sm:text-base">
-            {c('home_hero_subtitle', 'Discover the best products, deals and buying recommendations in one place.')}
-          </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <a href={c('home_hero_cta1_link', '/products?deal=true')} className="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-brand-700 shadow-lg transition hover:-translate-y-0.5">
-              {c('home_hero_cta1_text', 'Explore Deals')}
-            </a>
-            <a href={c('home_hero_cta2_link', '/products?comparisonEnabled=true')} className="rounded-full border border-white/40 bg-white/10 px-6 py-2.5 text-sm font-semibold backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20">
-              {c('home_hero_cta2_text', 'Compare Products')}
-            </a>
+        </section>
+      ) : (
+        <section
+          className="relative overflow-hidden px-4 py-12 text-white sm:py-16"
+          style={{ background: `linear-gradient(135deg, ${c('home_hero_bg_from', '#2c31ab')}, ${c('home_hero_bg_to', '#4a5cf0')})` }}
+        >
+          <div className="container-app relative text-center">
+            {c('home_hero_badge') && (
+              <span className="inline-block rounded-full bg-white/15 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide backdrop-blur">
+                {c('home_hero_badge')}
+              </span>
+            )}
+            <h1
+              className="mx-auto mt-4 max-w-2xl font-display text-3xl font-bold leading-tight sm:text-4xl"
+              dangerouslySetInnerHTML={{ __html: c('home_hero_title', 'Shop Smarter. Compare Better. Save More.') }}
+            />
+            <p className="mx-auto mt-3 max-w-lg text-sm text-white/85 sm:text-base">
+              {c('home_hero_subtitle', 'Discover the best products, deals and buying recommendations in one place.')}
+            </p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <a href={c('home_hero_cta1_link', '/products?deal=true')} className="rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-brand-700 shadow-lg transition hover:-translate-y-0.5">
+                {c('home_hero_cta1_text', 'Explore Deals')}
+              </a>
+              <a href={c('home_hero_cta2_link', '/products?comparisonEnabled=true')} className="rounded-full border border-white/40 bg-white/10 px-6 py-2.5 text-sm font-semibold backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20">
+                {c('home_hero_cta2_text', 'Compare Products')}
+              </a>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ---------------- QUICK LINKS ---------------- */}
+      <section className="border-b border-slate-100 bg-white px-4 py-5">
+        <div className="container-app">
+          <div className="flex gap-3 overflow-x-auto pb-1 sm:justify-center sm:flex-wrap sm:overflow-visible">
+            {[
+              { to: '/products?deal=true', label: 'Deals', icon: '🔥' },
+              { to: '/products?comparisonEnabled=true', label: 'Compare', icon: '⚖️' },
+              { to: '/blog', label: 'Buying Guides', icon: '📖' },
+              { to: '/categories', label: 'Categories', icon: '🗂️' },
+              { to: '/#tools', label: 'Free Tools', icon: '🛠️' },
+              { to: '/products', label: 'All Products', icon: '🛍️' },
+            ].map((item) => (
+              <Link
+                key={item.label}
+                to={item.to}
+                className="flex shrink-0 items-center gap-2 rounded-2xl border border-slate-100 bg-white px-4 py-2.5 shadow-card transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-cardHover"
+              >
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-50 text-base">{item.icon}</span>
+                <span className="text-sm font-semibold text-slate-700 whitespace-nowrap">{item.label}</span>
+              </Link>
+            ))}
           </div>
         </div>
-      </section>
-
-      {/* ---------------- SEARCH ---------------- */}
-      <section className="border-b border-slate-100 bg-white px-4 py-6">
-        <form onSubmit={submitSearch} className="container-app">
-          <div className="relative mx-auto max-w-xl">
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={c('home_search_placeholder', 'What are you looking for?')}
-              className="w-full rounded-full border border-slate-200 bg-slate-50 py-3 pl-5 pr-14 text-sm shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-100"
-            />
-            <button type="submit" className="absolute right-1.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-brand-500 text-white">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></svg>
-            </button>
-          </div>
-        </form>
       </section>
 
       <div className="container-app py-10 space-y-14">
@@ -323,7 +404,7 @@ export default function Home() {
           // -------- Free Tools --------
           if (key === 'tools') {
             return (
-              <section key="tools" className="rounded-2xl bg-gradient-to-br from-brand-50 to-white p-6 sm:p-10">
+              <section key="tools" id="tools" className="rounded-2xl bg-gradient-to-br from-brand-50 to-white p-6 sm:p-10 scroll-mt-20">
                 <div className="mb-5 text-center">
                   <h2 className="section-title">{s.title || 'Free Tools by Dostivox'}</h2>
                   {s.subtitle && <p className="mt-1 text-sm text-slate-500">{s.subtitle}</p>}
