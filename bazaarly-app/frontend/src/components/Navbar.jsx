@@ -61,12 +61,12 @@ export default function Navbar() {
         </form>
 
         <div className="ml-auto md:ml-4 flex items-center gap-4">
-          <Link to="/wishlist" className="relative text-slate-600 hover:text-accent-500" aria-label="Wishlist">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 21s-7-4.35-9.5-8.5C1 9 2.5 6 5.5 6c2 0 3.3 1.2 4 2.2C10.2 7.2 11.5 6 13.5 6 16.5 6 18 9 21 12.5 18.5 16.65 12 21 12 21z" /></svg>
+          <Link to="/wishlist" className="grid h-10 w-10 place-items-center rounded-full bg-slate-50 text-slate-600 shadow-sm ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:text-accent-500 hover:shadow-md" aria-label="Wishlist">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.1 20.3l-1.1-1C6.1 15.4 3 12.6 3 9.1 3 6.3 5.2 4 8 4c1.6 0 3.1.8 4 2 .9-1.2 2.4-2 4-2 2.8 0 5 2.3 5 5.1 0 3.5-3.1 6.3-8 10.2l-.9.9z" /></svg>
           </Link>
-          <Link to="/cart" className="relative text-slate-600 hover:text-brand-600" aria-label="Cart">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 6h15l-1.5 9h-12z" /><circle cx="9" cy="20" r="1" /><circle cx="18" cy="20" r="1" /></svg>
-            {count > 0 && <span className="absolute -top-2 -right-2 grid h-5 w-5 place-items-center rounded-full bg-accent-500 text-[10px] text-white">{count}</span>}
+          <Link to="/cart" className="relative grid h-10 w-10 place-items-center rounded-full bg-slate-50 text-slate-600 shadow-sm ring-1 ring-slate-100 transition hover:-translate-y-0.5 hover:text-brand-600 hover:shadow-md" aria-label="Cart">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 4h2l.4 2M7 13h10l3-8H6.4M7 13L5.4 6M7 13l-1.5 3.5A1 1 0 0 0 6.4 18H17" /><circle cx="9" cy="21" r="1.4" /><circle cx="17" cy="21" r="1.4" /></svg>
+            {count > 0 && <span className="absolute -top-1.5 -right-1.5 grid h-5 w-5 place-items-center rounded-full bg-accent-500 text-[10px] font-semibold text-white shadow-sm ring-2 ring-white">{count}</span>}
           </Link>
           {user ? (
             <div className="relative group">
