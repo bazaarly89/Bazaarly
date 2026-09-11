@@ -17,6 +17,14 @@ export default function Navbar() {
     setMenuOpen(false);
   };
 
+  // Clicking a nav link should always land you at the top of that page —
+  // even if you're already on it (React Router won't scroll on its own
+  // when the route doesn't change).
+  const handleNavClick = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setMenuOpen(false);
+  };
+
   const navLinks = [
     { to: '/', label: 'Home' },
     { to: '/categories', label: 'Categories' },
@@ -35,11 +43,11 @@ export default function Navbar() {
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
 
-        <Link to="/" className="font-display text-2xl font-bold text-brand-600 shrink-0">Dostivox</Link>
+        <Link to="/" onClick={handleNavClick} className="font-display text-2xl font-bold text-brand-600 shrink-0">Dostivox</Link>
 
         <nav className="hidden lg:flex items-center gap-6 ml-6">
           {navLinks.map((l) => (
-            <Link key={l.to} to={l.to} className="text-sm font-medium text-slate-600 hover:text-brand-600 transition">{l.label}</Link>
+            <Link key={l.to} to={l.to} onClick={handleNavClick} className="text-sm font-medium text-slate-600 hover:text-brand-600 transition">{l.label}</Link>
           ))}
         </nav>
 
@@ -106,7 +114,7 @@ export default function Navbar() {
       {menuOpen && (
         <div className="lg:hidden border-t border-slate-100 px-4 py-3 space-y-2">
           {navLinks.map((l) => (
-            <Link key={l.to} to={l.to} onClick={() => setMenuOpen(false)} className="block py-1.5 text-sm font-medium text-slate-700">{l.label}</Link>
+            <Link key={l.to} to={l.to} onClick={handleNavClick} className="block py-1.5 text-sm font-medium text-slate-700">{l.label}</Link>
           ))}
         </div>
       )}
