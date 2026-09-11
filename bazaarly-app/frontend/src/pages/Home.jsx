@@ -15,7 +15,6 @@ export default function Home() {
   const [trustCards, setTrustCards] = useState([]);
   const [homeSections, setHomeSections] = useState([]);
   const [content, setContent] = useState({});
-  const [loading, setLoading] = useState(true);
 
   const [tools, setTools] = useState([]);
   const [heroSlides, setHeroSlides] = useState([]);
@@ -31,34 +30,54 @@ export default function Home() {
   const [subStatus, setSubStatus] = useState(''); // '', 'sending', 'done', 'error'
 
   useEffect(() => {
+    // Each section fetches independently instead of one Promise.all gate —
+    // that way nothing on the page waits for the slowest call, and the
+    // customer never sees a blank "Loading…" screen. Hero/Nav/skeletons
+    // render immediately; each section fills in the moment its own data
+    // arrives, in whatever order the backend answers.
     let mounted = true;
-    Promise.all([
-      Api.categories().catch(() => ({ categories: [] })),
-      Api.products({ sort: 'popular', limit: 8 }).catch(() => ({ products: [] })),
-      Api.products({ deal: true, limit: 8 }).catch(() => ({ products: [] })),
-      Api.products({ comparisonEnabled: true, limit: 4 }).catch(() => ({ products: [] })),
-      Api.articles({ category: 'Buying Guides', limit: 4 }).catch(() => ({ articles: [] })),
-      Api.trustCards().catch(() => ({ cards: [] })),
-      Api.homeSections().catch(() => ({ sections: [] })),
-      Api.siteContent().catch(() => ({ content: {} })),
-      Api.heroSlides().catch(() => ({ slides: [] })),
-    ]).then(([catRes, trendRes, dealRes, cmpRes, guideRes, trustRes, sectionRes, contentRes, heroRes]) => {
+
+    Api.categories().then((r) => {
+      if (mounted) setCategories((r.categories || []).filter((c) => c.is_active !== false && c.is_active !== 0));
+    }).catch(() => {});
+
+    Api.products({ sort: 'popular', limit: 8 }).then((r) => {
+      if (mounted) setTrending(r.products || []);
+    }).catch(() => {});
+
+    Api.products({ deal: true, limit: 8 }).then((r) => {
+      if (mounted) setDeals(r.products || []);
+    }).catch(() => {});
+
+    Api.products({ comparisonEnabled: true, limit: 4 }).then((r) => {
+      if (mounted) setCompareProducts(r.products || []);
+    }).catch(() => {});
+
+    Api.articles({ category: 'Buying Guides', limit: 4 }).then((r) => {
+      if (mounted) setGuides(r.articles || []);
+    }).catch(() => {});
+
+    Api.trustCards().then((r) => {
+      if (mounted) setTrustCards(r.cards || []);
+    }).catch(() => {});
+
+    Api.homeSections().then((r) => {
+      if (mounted) setHomeSections(r.sections || []);
+    }).catch(() => {});
+
+    Api.siteContent().then((r) => {
       if (!mounted) return;
-      setCategories((catRes.categories || []).filter((c) => c.is_active !== false && c.is_active !== 0));
-      setTrending(trendRes.products || []);
-      setDeals(dealRes.products || []);
-      setCompareProducts(cmpRes.products || []);
-      setGuides(guideRes.articles || []);
-      setTrustCards(trustRes.cards || []);
-      setHomeSections(sectionRes.sections || []);
-      setContent(contentRes.content || {});
-      setHeroSlides(heroRes.slides || []);
+      setContent(r.content || {});
       try {
-        const parsedTools = JSON.parse(contentRes.content?.home_tools || '[]');
+        const parsedTools = JSON.parse(r.content?.home_tools || '[]');
         setTools(Array.isArray(parsedTools) ? parsedTools : []);
       } catch { setTools([]); }
-      setLoading(false);
-    });
+    }).catch(() => {});
+
+    Api.heroSlides().then((r) => {
+      if (mounted) setHeroSlides(r.slides || []);
+    }).catch(() => {});
+
     return () => { mounted = false; };
   }, []);
 
@@ -107,10 +126,6 @@ export default function Home() {
       setSubStatus('error');
     }
   };
-
-  if (loading) {
-    return <div className="container-app py-24 text-center text-slate-400">Loading Dostivox…</div>;
-  }
 
   return (
     <div>
