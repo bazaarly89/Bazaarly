@@ -21,6 +21,7 @@ export default function ProductDetails() {
   const [isWished, setIsWished] = useState(false);
   const [shareMsg, setShareMsg] = useState('');
   const [showFullDesc, setShowFullDesc] = useState(false);
+  const [showFullTitle, setShowFullTitle] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState([]);
 
   const load = () => Api.product(slug).then(setData);
@@ -160,7 +161,7 @@ export default function ProductDetails() {
             </div>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-3">
-            <h1 className="font-display text-3xl font-semibold leading-tight text-slate-900 sm:text-[2.25rem]">
+            <h1 className={`font-display font-semibold leading-tight text-slate-900 text-3xl sm:text-[2.25rem] ${showFullTitle ? '' : 'line-clamp-2 overflow-hidden'}`}>
               {product.title}
             </h1>
             {isAffiliate && bestOffer?.merchant && <MerchantBadge merchant={bestOffer.merchant} logo={bestOffer.merchantLogo} size="lg" />}
@@ -170,6 +171,17 @@ export default function ProductDetails() {
               </span>
             )}
           </div>
+          {product.title?.length > 70 && (
+            <button
+              onClick={() => setShowFullTitle((v) => !v)}
+              className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline"
+            >
+              {showFullTitle ? 'Show less' : 'View more'}
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`transition-transform ${showFullTitle ? 'rotate-180' : ''}`}>
+                <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
 
           {!isAffiliate ? (
             <a href="#reviews" className="mt-3 inline-block">
