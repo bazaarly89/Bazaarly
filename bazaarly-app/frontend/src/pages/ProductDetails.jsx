@@ -138,7 +138,7 @@ export default function ProductDetails() {
         </div>
 
         {/* Details */}
-        <div>
+        <div className="animate-fadeUp">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold uppercase tracking-wider text-brand-500">{product.brand}</p>
             <div className="flex shrink-0 items-center gap-2">
@@ -182,7 +182,7 @@ export default function ProductDetails() {
           ) : null}
 
           {/* Price block */}
-          <div className="mt-6 rounded-xl2 bg-slate-50 p-5">
+          <div className="mt-6 rounded-2xl border border-slate-100 bg-gradient-to-br from-slate-50 to-white p-5 shadow-card">
             <div className="flex flex-wrap items-baseline gap-3">
               <span className="font-display text-4xl font-bold text-slate-900">
                 ₹{(isAffiliate ? bestOffer?.currentPrice : product.price)?.toLocaleString()}
@@ -223,7 +223,7 @@ export default function ProductDetails() {
           {isAffiliate && sortedOffers.length > 0 && (
             <div className="mt-4 space-y-2">
               {sortedOffers.map((o, i) => (
-                <div key={i} className="flex items-center justify-between gap-3 rounded-xl2 border border-slate-200 p-3">
+                <div key={i} className={`flex items-center justify-between gap-3 rounded-2xl border p-3 transition ${i === 0 && sortedOffers.length > 1 ? 'border-green-200 bg-green-50/40 shadow-card' : 'border-slate-200 hover:border-slate-300'}`}>
                   <div className="flex items-center gap-3">
                     <MerchantBadge merchant={o.merchant} logo={o.merchantLogo} size="lg" />
                     <div>
@@ -268,25 +268,33 @@ export default function ProductDetails() {
           )}
 
           <div>
-            <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-400">Description</h2>
-            <div
-              className={`prose-content mt-2 leading-relaxed text-slate-600 [&_ol]:mt-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mt-3 [&_p:first-child]:mt-0 [&_strong]:font-semibold [&_strong]:text-slate-800 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:mt-1 ${showFullDesc ? '' : 'line-clamp-4 overflow-hidden'}`}
-              dangerouslySetInnerHTML={{ __html: product.description }}
-            />
+            <h2 className="mt-10 text-sm font-semibold uppercase tracking-wide text-slate-400">Description</h2>
+            <div className="relative mt-3">
+              <div
+                className={`prose-content leading-relaxed text-slate-600 [&_ol]:mt-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mt-3 [&_p:first-child]:mt-0 [&_strong]:font-semibold [&_strong]:text-slate-800 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:mt-1 ${showFullDesc ? '' : 'line-clamp-4 overflow-hidden'}`}
+                dangerouslySetInnerHTML={{ __html: product.description }}
+              />
+              {!showFullDesc && (
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white to-transparent" />
+              )}
+            </div>
             <button
               onClick={() => setShowFullDesc((v) => !v)}
-              className="mt-2 text-sm font-semibold text-brand-600 hover:underline"
+              className="mt-3 inline-flex items-center gap-1 rounded-full border border-slate-200 px-4 py-1.5 text-sm font-semibold text-brand-600 transition hover:border-brand-300 hover:bg-brand-50"
             >
-              {showFullDesc ? 'Show less' : '...more'}
+              {showFullDesc ? 'Show less' : 'View more'}
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`transition-transform ${showFullDesc ? 'rotate-180' : ''}`}>
+                <path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </button>
           </div>
 
           {attributes?.length > 0 && (
             <div>
-              <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-400">Specifications</h2>
-              <dl className="mt-2 divide-y divide-slate-100 rounded-xl2 border border-slate-100">
+              <h2 className="mt-10 text-sm font-semibold uppercase tracking-wide text-slate-400">Specifications</h2>
+              <dl className="mt-3 divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-100 shadow-card">
                 {attributes.map((a, i) => (
-                  <div key={i} className="flex justify-between gap-4 px-4 py-2.5 text-sm">
+                  <div key={i} className={`flex justify-between gap-4 px-4 py-3 text-sm ${i % 2 === 1 ? 'bg-slate-50/60' : ''}`}>
                     <dt className="text-slate-500">{a.attr_key}</dt>
                     <dd className="text-right font-medium text-slate-800">{a.attr_value}</dd>
                   </div>
@@ -326,15 +334,15 @@ export default function ProductDetails() {
 
           {/* Trust badges */}
           <div className="mt-8 grid grid-cols-3 gap-3 border-t border-slate-100 pt-6 text-center">
-            <div className="flex flex-col items-center gap-1.5">
+            <div className="flex flex-col items-center gap-1.5 rounded-xl2 py-2 transition hover:bg-slate-50">
               <Truck size={20} className="text-brand-500" />
               <p className="text-xs font-medium text-slate-500">Fast Delivery</p>
             </div>
-            <div className="flex flex-col items-center gap-1.5">
+            <div className="flex flex-col items-center gap-1.5 rounded-xl2 py-2 transition hover:bg-slate-50">
               <RotateCcw size={20} className="text-brand-500" />
               <p className="text-xs font-medium text-slate-500">Easy Returns</p>
             </div>
-            <div className="flex flex-col items-center gap-1.5">
+            <div className="flex flex-col items-center gap-1.5 rounded-xl2 py-2 transition hover:bg-slate-50">
               <ShieldCheck size={20} className="text-brand-500" />
               <p className="text-xs font-medium text-slate-500">Secure Payment</p>
             </div>
@@ -396,7 +404,7 @@ export default function ProductDetails() {
       </div>
 
       {/* Sticky mobile buy bar */}
-      <div className="fixed inset-x-0 bottom-0 z-30 flex gap-3 border-t border-slate-100 bg-white/95 p-3 backdrop-blur lg:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-30 flex gap-3 border-t border-slate-100 bg-white/95 p-3 shadow-[0_-8px_24px_-8px_rgba(31,35,102,0.12)] backdrop-blur lg:hidden">
         {isAffiliate ? (
           <button onClick={() => handleCheckDeal(bestOffer?.affiliateUrl)} className="btn-accent flex-1">{bestOffer?.ctaText || 'Check Deal'}</button>
         ) : (
