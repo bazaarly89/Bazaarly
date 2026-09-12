@@ -35,7 +35,7 @@ export default function ImageZoom({ images = [], size = 'medium' }) {
   const onPointerDown = (e) => {
     if (count <= 1) return;
     setZooming(false);
-    dragRef.current = { startX: e.clientX, width: trackRef.current.getBoundingClientRect().width };
+    dragRef.current = { startX: e.clientX, containerWidth: containerRef.current.getBoundingClientRect().width };
     setIsDragging(true);
     trackRef.current.setPointerCapture?.(e.pointerId);
   };
@@ -45,8 +45,8 @@ export default function ImageZoom({ images = [], size = 'medium' }) {
   };
   const onPointerUp = () => {
     if (!dragRef.current) return;
-    const { width } = dragRef.current;
-    const threshold = width * 0.18;
+    const { containerWidth } = dragRef.current;
+    const threshold = containerWidth * 0.18;
     if (dragPx <= -threshold && active < count - 1) goTo(active + 1);
     else if (dragPx >= threshold && active > 0) goTo(active - 1);
     dragRef.current = null;
@@ -55,7 +55,10 @@ export default function ImageZoom({ images = [], size = 'medium' }) {
   };
 
   const baseOffsetPct = -active * 100;
-  const dragOffsetPct = dragRef.current ? (dragPx / dragRef.current.width) * 100 : 0;
+  // dragPx is in screen pixels for one slide's width; express it as a
+  // percentage of the *track's* total width (count slides wide) since
+  // that's what translateX% is relative to.
+  const dragOffsetPct = dragRef.current ? (dragPx / (dragRef.current.containerWidth * count)) * 100 : 0;
 
   return (
     <div className="select-none">
@@ -75,7 +78,7 @@ export default function ImageZoom({ images = [], size = 'medium' }) {
           onPointerLeave={onPointerUp}
           style={{
             width: `${count * 100}%`,
-            transform: `translateX(calc(${baseOffsetPct / count}% + ${dragOffsetPct / count}%))`,
+            transform: `translateX(calc(${baseOffsetPct / count}% + ${dragOffsetPct}%))`,
             transition: isDragging ? 'none' : 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)',
           }}
         >
