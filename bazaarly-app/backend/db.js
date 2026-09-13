@@ -266,10 +266,11 @@ const subscriberSchema = new mongoose.Schema({
 const otpSchema = new mongoose.Schema({
   _id: { type: String, default: uuid },
   email: { type: String, required: true },
-  code: { type: String, required: true },
+  code: { type: String, required: true }, // stores a bcrypt hash of the OTP, never the plaintext code
   purpose: { type: String, required: true }, // reset_password | login
   expiresAt: { type: Number, required: true },
   used: { type: Boolean, default: false },
+  attempts: { type: Number, default: 0 }, // failed verification attempts, locks out after a limit
   createdAt: { type: Date, default: Date.now },
 });
 
