@@ -96,6 +96,11 @@ async function placeOrderFromCart(userId, opts) {
   if (calc.error) return { error: calc.error };
   if (!opts.addressId) return { error: 'Shipping address is required' };
 
+  // Ownership check: an address ID must belong to the ordering user, otherwise
+  // a customer could pass another user's addressId and attach it to their order.
+  const address = await Address.findOne({ _id: opts.addressId, userId }).lean();
+  if (!address) return { error: 'Invalid shipping address' };
+
   const orderItems = calc.items.map((it) => {
     const sortedImages = (it.images || []).slice().sort((a, b) => a.position - b.position);
     return { productId: it.id, title: it.title, image: sortedImages[0]?.url || null, price: it.price, quantity: it.quantity };
