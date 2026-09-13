@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const { v4: uuid } = require('uuid');
 const { Product, Category, Merchant, Order, User, Coupon, Banner, Advertisement, Notification, Setting, HeroSlide, TrustCard, NavItem, FooterColumn, FooterLink, HomeSection, Article, ARTICLE_CATEGORIES, Subscriber } = require('../db');
 const { adminRequired } = require('../middleware/auth');
+const { isSafeUrl, sanitizeRichHtml } = require('../utils/security');
 const router = express.Router();
 
 router.use(adminRequired);
@@ -102,7 +103,7 @@ router.post('/products', async (req, res) => {
   const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString(36);
 
   const productData = {
-    title, slug, description: description || '', shortDescription: shortDescription || '',
+    title, slug, description: sanitizeRichHtml(description || ''), shortDescription: shortDescription || '',
     categoryId, brand: brand || '', productType,
     images: images.map((url, i) => ({ url, position: i })),
     attributes,
@@ -119,6 +120,8 @@ router.post('/products', async (req, res) => {
     // Affiliate products never touch cart/stock — they only redirect out
     const cleanOffers = offers.filter((o) => o && o.affiliateUrl);
     if (!cleanOffers.length) return res.status(400).json({ error: 'At least one merchant offer with an affiliate link is required' });
+    const unsafeOffer = cleanOffers.find((o) => !isSafeUrl(o.affiliateUrl) || (o.regularUrl && !isSafeUrl(o.regularUrl)));
+    if (unsafeOffer) return res.status(400).json({ error: 'Affiliate/regular URLs must be valid http(s) links' });
     productData.offers = cleanOffers.map((o) => ({
       merchant: o.merchant || '',
       merchantLogo: o.merchantLogo || '',
@@ -159,7 +162,7 @@ router.put('/products/:id', async (req, res) => {
 
   const update = { updatedAt: new Date() };
   if (title !== undefined) update.title = title;
-  if (description !== undefined) update.description = description;
+  if (description !== undefined) update.description = sanitizeRichHtml(description);
   if (shortDescription !== undefined) update.shortDescription = shortDescription;
   if (categoryId !== undefined) update.categoryId = categoryId;
   if (brand !== undefined) update.brand = brand;
@@ -182,6 +185,8 @@ router.put('/products/:id', async (req, res) => {
   // affiliate-product fields — one or more merchant offers
   if (Array.isArray(offers)) {
     const cleanOffers = offers.filter((o) => o && o.affiliateUrl);
+    const unsafeOffer = cleanOffers.find((o) => !isSafeUrl(o.affiliateUrl) || (o.regularUrl && !isSafeUrl(o.regularUrl)));
+    if (unsafeOffer) return res.status(400).json({ error: 'Affiliate/regular URLs must be valid http(s) links' });
     update.offers = cleanOffers.map((o) => ({
       merchant: o.merchant || '',
       merchantLogo: o.merchantLogo || '',
@@ -385,11 +390,17 @@ router.get('/banners', async (req, res) => {
 });
 router.post('/banners', async (req, res) => {
   const { title, image, link, position } = req.body;
+  if (link && !isSafeUrl(link, { allowRelative: true })) {
+    return res.status(400).json({ error: 'Link must be a valid http(s) URL or an on-site path' });
+  }
   const banner = await Banner.create({ title, image, link: link || '', position: position || 0 });
   res.status(201).json({ banner: { ...banner.toObject(), id: banner._id } });
 });
 router.put('/banners/:id', async (req, res) => {
   const { title, image, link, position, isActive } = req.body;
+  if (link && !isSafeUrl(link, { allowRelative: true })) {
+    return res.status(400).json({ error: 'Link must be a valid http(s) URL or an on-site path' });
+  }
   const update = {};
   if (title !== undefined) update.title = title;
   if (image !== undefined) update.image = image;
@@ -411,6 +422,9 @@ router.get('/advertisements', async (req, res) => {
 });
 router.post('/advertisements', async (req, res) => {
   const { title, image, link, placement } = req.body;
+  if (link && !isSafeUrl(link, { allowRelative: true })) {
+    return res.status(400).json({ error: 'Link must be a valid http(s) URL or an on-site path' });
+  }
   const ad = await Advertisement.create({ title, image, link: link || '', placement: placement || 'home_top' });
   res.status(201).json({ advertisement: { ...ad.toObject(), id: ad._id } });
 });
@@ -491,6 +505,9 @@ router.get('/hero-slides', async (req, res) => {
 });
 router.post('/hero-slides', async (req, res) => {
   const { mode, image, eyebrow, title, subtitle, specs = [], ctaText, ctaLink, position = 0, imageFit } = req.body;
+  if (ctaLink && !isSafeUrl(ctaLink, { allowRelative: true })) {
+    return res.status(400).json({ error: 'CTA link must be a valid http(s) URL or an on-site path' });
+  }
   const slide = await HeroSlide.create({
     mode: mode || 'text', image, eyebrow: eyebrow || '', title: title || '', subtitle: subtitle || '',
     specs, ctaText: ctaText || '', ctaLink: ctaLink || '', position, imageFit: imageFit || 'cover',
@@ -499,6 +516,9 @@ router.post('/hero-slides', async (req, res) => {
 });
 router.put('/hero-slides/:id', async (req, res) => {
   const { mode, image, eyebrow, title, subtitle, specs, ctaText, ctaLink, position, isActive, imageFit } = req.body;
+  if (ctaLink && !isSafeUrl(ctaLink, { allowRelative: true })) {
+    return res.status(400).json({ error: 'CTA link must be a valid http(s) URL or an on-site path' });
+  }
   const update = {};
   if (mode !== undefined) update.mode = mode;
   if (image !== undefined) update.image = image;
@@ -695,7 +715,7 @@ router.post('/articles', async (req, res) => {
     featuredImage: featuredImage || '',
     author: author || 'Dostivox Team',
     category: ARTICLE_CATEGORIES.includes(category) ? category : 'Buying Guides',
-    content,
+    content: sanitizeRichHtml(content),
     faq: (faq || []).filter((f) => f && f.question && f.answer),
     relatedProductIds: Array.isArray(relatedProductIds) ? relatedProductIds : [],
     seoTitle: seoTitle || title,
@@ -728,7 +748,7 @@ router.put('/articles/:id', async (req, res) => {
   if (featuredImage !== undefined) update.featuredImage = featuredImage;
   if (author !== undefined) update.author = author;
   if (category !== undefined) update.category = ARTICLE_CATEGORIES.includes(category) ? category : 'Buying Guides';
-  if (content !== undefined) update.content = content;
+  if (content !== undefined) update.content = sanitizeRichHtml(content);
   if (Array.isArray(faq)) update.faq = faq.filter((f) => f && f.question && f.answer);
   if (Array.isArray(relatedProductIds)) update.relatedProductIds = relatedProductIds;
   if (seoTitle !== undefined) update.seoTitle = seoTitle;
