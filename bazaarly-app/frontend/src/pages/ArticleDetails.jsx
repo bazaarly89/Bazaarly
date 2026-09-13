@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import { Api } from '../api/client';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
@@ -99,7 +100,7 @@ export default function ArticleDetails() {
           <img src={article.featuredImage} alt={article.title} className="mt-6 aspect-video w-full rounded-xl2 object-cover" />
         )}
 
-        <div className="article-content mt-8" dangerouslySetInnerHTML={{ __html: article.content }} />
+        <div className="article-content mt-8" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(article.content || '') }} />
 
         {article.faq?.length > 0 && (
           <div className="mt-12">
