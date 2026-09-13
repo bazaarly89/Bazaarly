@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import { Api } from '../api/client';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
@@ -219,7 +220,7 @@ export default function Home() {
               )}
               <h1
                 className="mx-auto mt-4 max-w-2xl font-display text-2xl font-bold leading-tight sm:text-4xl"
-                dangerouslySetInnerHTML={{ __html: c('home_hero_title', 'Shop Smarter. Compare Better. Save More.') }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(c('home_hero_title', 'Shop Smarter. Compare Better. Save More.')) }}
               />
               <p className="mx-auto mt-3 max-w-lg text-sm text-white/85 sm:text-base">
                 {c('home_hero_subtitle', 'Discover the best products, deals and buying recommendations in one place.')}
