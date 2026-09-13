@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Heart, Share2, Truck, ShieldCheck, RotateCcw } from 'lucide-react';
+import DOMPurify from 'dompurify';
 import { Api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -284,7 +285,7 @@ export default function ProductDetails() {
             <div className="relative mt-3">
               <div
                 className={`prose-content leading-relaxed text-slate-600 [&_ol]:mt-3 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mt-3 [&_p:first-child]:mt-0 [&_strong]:font-semibold [&_strong]:text-slate-800 [&_ul]:mt-3 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:mt-1 ${showFullDesc ? '' : 'line-clamp-4 overflow-hidden'}`}
-                dangerouslySetInnerHTML={{ __html: product.description }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(product.description || '') }}
               />
               {!showFullDesc && (
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white to-transparent" />
