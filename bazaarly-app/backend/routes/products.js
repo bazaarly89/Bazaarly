@@ -1,5 +1,6 @@
 const express = require('express');
 const { Product, Category, Review, User } = require('../db');
+const { escapeRegex } = require('../utils/security');
 const router = express.Router();
 
 function formatProduct(p, categoryDoc) {
@@ -25,7 +26,7 @@ router.get('/', async (req, res) => {
   if (comparisonEnabled === 'true') filter.comparisonEnabled = true;
 
   if (search) {
-    const regex = new RegExp(search, 'i');
+    const regex = new RegExp(escapeRegex(search), 'i');
     andConditions.push({ $or: [{ title: regex }, { description: regex }, { brand: regex }] });
   }
   if (category) {
