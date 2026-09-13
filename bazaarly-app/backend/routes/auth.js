@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
@@ -8,13 +9,18 @@ const { sendOtpEmail } = require('../utils/mailer');
 
 const router = express.Router();
 
+const OTP_TTL_MS = 1000 * 60 * 10; // 10 minutes
+const OTP_RESEND_COOLDOWN_MS = 1000 * 60; // 1 minute between resend requests
+const OTP_MAX_ATTEMPTS = 5;
+
 function signUserToken(user) {
   return jwt.sign({ id: user.id, email: user.email, role: user.role, name: user.name },
     process.env.JWT_SECRET, { expiresIn: '7d' });
 }
 
+// Cryptographically secure 6-digit OTP (never Math.random() for security codes)
 function generateOtp() {
-  return String(Math.floor(100000 + Math.random() * 900000)); // 6-digit code
+  return String(crypto.randomInt(100000, 1000000));
 }
 
 // ---------- REGISTER ----------
@@ -60,9 +66,16 @@ router.post('/forgot-password', body('email').isEmail(), async (req, res) => {
   const genericMessage = { message: 'If that email exists, an OTP has been sent.' };
   if (!user) return res.json(genericMessage);
 
+  // Cooldown: refuse a new OTP if one was requested very recently for this email
+  const recent = await Otp.findOne({ email, purpose: 'reset_password' }).sort({ createdAt: -1 });
+  if (recent && Date.now() - new Date(recent.createdAt).getTime() < OTP_RESEND_COOLDOWN_MS) {
+    return res.json(genericMessage); // same generic response — no enumeration, no spam
+  }
+
   const code = generateOtp();
-  const expiry = Date.now() + 1000 * 60 * 10; // 10 minutes
-  await Otp.create({ email, code, purpose: 'reset_password', expiresAt: expiry });
+  const codeHash = bcrypt.hashSync(code, 10);
+  const expiry = Date.now() + OTP_TTL_MS;
+  await Otp.create({ email, code: codeHash, purpose: 'reset_password', expiresAt: expiry });
 
   try {
     await sendOtpEmail(email, code, 'reset_password');
@@ -85,10 +98,22 @@ router.post('/reset-password',
 
     const { email, otp, password } = req.body;
 
-    const record = await Otp.findOne({ email, code: otp, purpose: 'reset_password', used: false })
+    const record = await Otp.findOne({ email, purpose: 'reset_password', used: false })
       .sort({ createdAt: -1 });
 
     if (!record || record.expiresAt < Date.now()) {
+      return res.status(400).json({ error: 'OTP is invalid or expired' });
+    }
+
+    if (record.attempts >= OTP_MAX_ATTEMPTS) {
+      record.used = true; // lock this OTP out permanently after too many failed guesses
+      await record.save();
+      return res.status(429).json({ error: 'Too many incorrect attempts. Please request a new OTP.' });
+    }
+
+    if (!bcrypt.compareSync(otp, record.code)) {
+      record.attempts += 1;
+      await record.save();
       return res.status(400).json({ error: 'OTP is invalid or expired' });
     }
 
