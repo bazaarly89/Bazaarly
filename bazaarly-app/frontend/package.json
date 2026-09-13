@@ -14,7 +14,8 @@
     "react-router-dom": "^6.26.2",
     "axios": "^1.7.7",
     "react-quill": "^2.0.0",
-    "lucide-react": "^0.383.0"
+    "lucide-react": "^0.383.0",
+    "dompurify": "^3.1.6"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
