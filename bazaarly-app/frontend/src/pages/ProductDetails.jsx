@@ -24,9 +24,19 @@ export default function ProductDetails() {
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [showFullTitle, setShowFullTitle] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState([]);
+  const [slowLoad, setSlowLoad] = useState(false);
 
   const load = () => Api.product(slug).then(setData);
   useEffect(() => { load(); window.scrollTo(0, 0); }, [slug]);
+
+  // If the backend is waking up from an idle sleep, the very first request can
+  // take much longer than usual. Only show a "waking up" hint once loading has
+  // genuinely dragged on, so normal fast loads never see this message.
+  useEffect(() => {
+    if (data) { setSlowLoad(false); return; }
+    const timer = setTimeout(() => setSlowLoad(true), 4000);
+    return () => clearTimeout(timer);
+  }, [data, slug]);
 
   // Load other products to suggest ("You may also like") — from any category
   useEffect(() => {
@@ -70,7 +80,12 @@ export default function ProductDetails() {
     return (
       <div className="container-app py-24 text-center">
         <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-brand-200 border-t-brand-600" />
-        <p className="mt-4 text-sm text-slate-400">Loading product…</p>
+        <p className="mt-4 text-sm text-slate-400">
+          {slowLoad ? "Just a moment, waking things up on our end…" : 'Loading product…'}
+        </p>
+        {slowLoad && (
+          <p className="mt-2 text-xs text-slate-400">This can take up to a minute on the first visit — thanks for your patience!</p>
+        )}
       </div>
     );
   }
