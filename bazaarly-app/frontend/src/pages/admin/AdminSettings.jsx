@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { AdminApi } from '../../api/client';
+import ChangePasswordCard from './ChangePasswordCard';
 
 // Toolbar for the Hero Title editor — lets the admin select part of the
 // text (e.g. just the word "Shop") and change its size and color.
@@ -171,6 +172,7 @@ export default function AdminSettings() {
   return (
     <div>
       <h1 className="section-title mb-6">Store Settings</h1>
+      <ChangePasswordCard />
       <form onSubmit={submit} className="card max-w-lg space-y-4 p-6">
         <div>
           <label className="label">Store Name</label>
