@@ -124,6 +124,7 @@ export const AdminApi = {
   createProduct: (data) => unwrap(adminApi.post('/admin/products', data)),
   updateProduct: (id, data) => unwrap(adminApi.put(`/admin/products/${id}`, data)),
   deleteProduct: (id) => unwrap(adminApi.delete(`/admin/products/${id}`)),
+  fetchLinkData: (url) => unwrap(adminApi.post('/admin/link-import', { url })),
 
   inventory: () => unwrap(adminApi.get('/admin/inventory')),
   updateStock: (id, stock) => unwrap(adminApi.put(`/admin/inventory/${id}`, { stock })),
