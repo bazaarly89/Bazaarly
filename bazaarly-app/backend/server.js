@@ -91,6 +91,7 @@ app.use('/api/trust-cards', require('./routes/trustCards'));
 app.use('/api/navigation', require('./routes/navigation'));
 app.use('/api/footer', require('./routes/footer'));
 app.use('/api/home-sections', require('./routes/homeSections'));
+app.use('/api/admin/link-import', require('./routes/linkImport'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/content', require('./routes/content'));   // ← ye naya
 app.use('/api/articles', require('./routes/articles')); // ← Buying Guides / Blog (public)
