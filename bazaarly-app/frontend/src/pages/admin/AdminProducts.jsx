@@ -68,6 +68,9 @@ export default function AdminProducts() {
   const [cropQueue, setCropQueue] = useState([]); // files still waiting to be positioned, one modal at a time
   const [saving, setSaving] = useState(false);
   const [filterType, setFilterType] = useState('all'); // all | own | affiliate
+  const [linkUrl, setLinkUrl] = useState('');
+  const [fetchingLink, setFetchingLink] = useState(false);
+  const [linkMsg, setLinkMsg] = useState('');
 
   const load = () => AdminApi.products().then((r) => setProducts(r.products));
   useEffect(() => {
@@ -113,6 +116,67 @@ export default function AdminProducts() {
   };
 
   const startNew = () => { setEditingId(null); setEditingMeta(null); setForm(emptyForm); setShowForm(true); };
+
+  // ---- "Link se bharo": paste a product link -> auto-fill everything ----
+  const escapeHtml = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const autofillFromLink = async () => {
+    const url = linkUrl.trim();
+    if (!url) { setLinkMsg('Pehle product ka link paste karo'); return; }
+    setFetchingLink(true);
+    setLinkMsg('');
+    try {
+      const { data } = await AdminApi.fetchLinkData(url);
+
+      // Copy up to 3 images to Cloudinary so they never break later
+      const uploaded = [];
+      for (const src of (data.images || []).slice(0, 3)) {
+        try {
+          const fd = new FormData();
+          fd.append('file', src);
+          fd.append('upload_preset', UPLOAD_PRESET);
+          const r = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: fd });
+          const j = await r.json();
+          uploaded.push(r.ok && j.secure_url ? j.secure_url : src);
+        } catch (e) { uploaded.push(src); }
+      }
+
+      const descParts = [];
+      if (data.description) descParts.push(`<p>${escapeHtml(data.description)}</p>`);
+      if (data.bullets && data.bullets.length) descParts.push(`<ul>${data.bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join('')}</ul>`);
+
+      const merchantMatch = merchants.find((m) => data.merchant && m.name.toLowerCase() === data.merchant.toLowerCase());
+
+      setForm((f) => {
+        const offers = f.offers.length ? f.offers.slice() : [{ ...emptyOffer }];
+        offers[0] = {
+          ...offers[0],
+          affiliateUrl: offers[0].affiliateUrl || url,
+          merchant: merchantMatch ? merchantMatch.name : offers[0].merchant,
+          merchantLogo: merchantMatch ? (merchantMatch.logo || '') : offers[0].merchantLogo,
+          currentPrice: data.price ?? offers[0].currentPrice,
+          originalPrice: data.originalPrice ?? offers[0].originalPrice,
+        };
+        return {
+          ...f,
+          productType: 'affiliate',
+          title: data.title || f.title,
+          shortDescription: (data.description || '').slice(0, 140) || f.shortDescription,
+          description: descParts.join('') || f.description,
+          brand: data.brand || f.brand,
+          tags: data.tags && data.tags.length ? data.tags.join(', ') : f.tags,
+          images: uploaded.length ? uploaded : f.images,
+          specs: data.specs && data.specs.length ? data.specs : f.specs,
+          offers,
+        };
+      });
+      setLinkMsg('✅ Details aa gayi. Category chuno, ek baar check karo aur Create Product dabao.');
+    } catch (err) {
+      setLinkMsg('❌ ' + err.message);
+    } finally {
+      setFetchingLink(false);
+    }
+  };
 
   const handleImageSelect = (e) => {
     const files = Array.from(e.target.files || []);
@@ -301,6 +365,18 @@ export default function AdminProducts() {
 
       {showForm && (
         <form onSubmit={submit} className="card mb-6 grid gap-3 p-6 sm:grid-cols-2">
+          {/* Link se bharo */}
+          <div className="rounded-xl2 border border-brand-500 bg-brand-50 p-4 sm:col-span-2">
+            <label className="mb-1 block text-sm font-semibold text-brand-700">⚡ Link se bharo (automatic)</label>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input type="url" placeholder="Product ka link yahan paste karo" className="input flex-1" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} />
+              <button type="button" onClick={autofillFromLink} disabled={fetchingLink} className="btn-primary whitespace-nowrap">
+                {fetchingLink ? 'Fetching…' : 'Details bharo'}
+              </button>
+            </div>
+            {linkMsg && <p className="mt-2 text-sm text-slate-600">{linkMsg}</p>}
+          </div>
+
           {/* Product type toggle */}
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-semibold text-slate-600">Product Type</label>
